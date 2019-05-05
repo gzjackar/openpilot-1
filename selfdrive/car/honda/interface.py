@@ -236,9 +236,8 @@ class CarInterface(object):
       ret.longitudinalKiV = [0.18, 0.12]
       ret.steerMPCReactTime = 0.025
       ret.steerMPCDampTime = 0.2
-      ret.steerReactTime = 0.02
-      ret.steerDampTime = 0.25
-      ret.steerBacklash = 0.1
+      ret.steerReactTime = 0.07
+      ret.steerDampTime = 0.1
       ret.rateFFGain = 0.4
 
     elif candidate == CAR.ACURA_ILX:
