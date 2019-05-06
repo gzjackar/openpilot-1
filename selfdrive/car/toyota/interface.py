@@ -86,13 +86,13 @@ class CarInterface(object):
     rotationalInertia_civic = 2500
     tireStiffnessFront_civic = 192150
     tireStiffnessRear_civic = 202500
-    ret.steerDampTime = 0.0
-    ret.steerReactTime = 0.001
-    ret.steerMPCReactTime = 0.001
-    ret.steerMPCDampTime = 0.0
-    ret.rateFFGain = 0.01
-    ret.steerActuatorDelay = 0.001
-    ret.steerBacklash = 0.0
+    ret.steerDampTime = 0.025       # Smooth steering rate over 12.5ms
+    ret.steerReactTime = 0.07       # Project steering rate over 70ms
+    ret.steerMPCReactTime = -0.05   # Offset desired dampened desired angle by -50 ms
+    ret.steerMPCDampTime = 0.18     # Project desired angle 180ms from now, but smooth it over 180ms
+    ret.rateFFGain = 0.2
+    ret.steerActuatorDelay = 0.04
+    ret.steerBacklash = 0.01        # This can be used to increase or decrease deadzone
 
     ret.steerKiBP, ret.steerKpBP = [[0.], [0.]]
 
@@ -106,13 +106,13 @@ class CarInterface(object):
       ret.steerKpV, ret.steerKiV = [[0.4], [0.05]]
       ret.steerKf = 0.0001   # full torque for 10 deg at 80mph means 0.00007818594
       # TODO: Prius seem to have very laggy actuators. Understand if it is lag or hysteresis
-      #ret.steerActuatorDelay = 0.01
-      ret.steerActuatorDelay = 0.0
-      ret.steerDampTime = 0.007
-      ret.steerReactTime = 0.0
-      ret.steerMPCReactTime = -0.12     # increase total MPC projected time by 25 ms
-      ret.steerMPCDampTime = 0.18       # dampen desired angle over 250ms (5 mpc cycles)
+      ret.steerActuatorDelay = 0.04
+      ret.steerDampTime = 0.05
+      ret.steerReactTime = 0.13
+      ret.steerMPCReactTime = -0.05
+      ret.steerMPCDampTime = 0.18
       ret.rateFFGain = 0.4
+      ret.steerBacklash = 0.005
 
     elif candidate in [CAR.RAV4, CAR.RAV4H]:
       stop_and_go = True if (candidate in CAR.RAV4H) else False
@@ -123,12 +123,14 @@ class CarInterface(object):
       ret.mass = 3650 * CV.LB_TO_KG + std_cargo  # mean between normal and hybrid
       ret.steerKpV, ret.steerKiV = [[0.3], [0.03]] # [[0.6], [0.05]]
       ret.steerKf = 0.0001   # full torque for 10 deg at 80mph means 0.00007818594
-      ret.steerActuatorDelay = 0.001
-      ret.steerDampTime = 0.007
-      ret.steerReactTime = 0.0
-      ret.steerMPCReactTime = -0.12     # increase total MPC projected time by 25 ms
-      ret.steerMPCDampTime = 0.25       # dampen desired angle over 250ms (5 mpc cycles)
+      ret.steerDampTime = 0.025
+      ret.steerReactTime = 0.07
+      ret.steerMPCReactTime = -0.05
+      ret.steerMPCDampTime = 0.18
       ret.rateFFGain = 0.4
+      ret.steerActuatorDelay = 0.04
+      ret.steerBacklash = 0.01
+
     elif candidate == CAR.COROLLA:
       stop_and_go = False
       ret.safetyParam = 100 # see conversion factor for STEER_TORQUE_EPS in dbc file
