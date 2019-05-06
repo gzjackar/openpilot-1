@@ -52,10 +52,10 @@ def data_sample(CI, CC, CS, plan_sock, path_plan_sock, thermal, calibration, hea
       CS = CI.update(CC)
     else:
       #time.sleep(0.03)
-      CS = CI.update(CC)
+      #CS = CI.update(CC)
       print("torque_clipped!")
   else:
-    CS = CI.update(CC)
+    #CS = CI.update(CC)
     print("CAN lagging!", rk.remaining, rk.frame)
 
   events = list(CS.events)

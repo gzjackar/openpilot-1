@@ -178,8 +178,9 @@ def dashboard_thread(rate=100):
               rateFF = config['rateFF']
               oscFactor = config['oscFactor']
               oscPeriod = config['oscPeriod']
-              kegmanDataString += ("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s|" % \
-                    (dampMPC, reactMPC, dampSteer, reactSteer, steerKpV, steerKiV, rateFF, l100.live100.angleFFGain, delaySteer,
+              backlash = config['backlash']
+              kegmanDataString += ("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s|" % \
+                    (backlash, dampMPC, reactMPC, dampSteer, reactSteer, steerKpV, steerKiV, rateFF, l100.live100.angleFFGain, delaySteer,
                     oscFactor, oscPeriod, receiveTime))
               insertString = kegmanFormatString + "~" + kegmanDataString + "!"
         except:
@@ -199,7 +200,7 @@ def dashboard_thread(rate=100):
       mapDataString = ""
       insertString = ""
     else:
-      time.sleep(0.1)
+      time.sleep(0.01)
 
 def main(rate=200):
   dashboard_thread(rate)
