@@ -61,7 +61,7 @@ def dashboard_thread(rate=100):
 
   tuneSub.setsockopt(zmq.SUBSCRIBE, str(user_id))
   influxFormatString = user_id + ",sources=capnp apply_steer=;noise_feedback=;ff_standard=;ff_rate=;ff_angle=;angle_steers_des=;angle_steers=;dampened_angle_steers_des=;steer_override=;v_ego=;p=;i=;f=;cumLagMs=; "
-  kegmanFormatString = user_id + ",sources=kegman dampMPC=;reactMPC=;dampSteer=;reactSteer=;KpV=;KiV=;rateFF=;angleFF=;delaySteer=;oscFactor=;oscPeriod=; "
+  kegmanFormatString = user_id + ",sources=kegman backlash=;dampMPC=;reactMPC=;dampSteer=;reactSteer=;KpV=;KiV=;rateFF=;angleFF=;delaySteer=;oscFactor=;oscPeriod=; "
   mapFormatString = "location,user=" + user_id + " latitude=;longitude=;altitude=;speed=;bearing=;accuracy=;speedLimitValid=;speedLimit=;curvatureValid=;curvature=;wayId=;distToTurn=;mapValid=;speedAdvisoryValid=;speedAdvisory=;speedAdvisoryValid=;speedAdvisory=;speedLimitAheadValid=;speedLimitAhead=;speedLimitAheadDistance=; "
   gpsFormatString="gps,user=" + user_id + " "
   liveStreamFormatString = "curvature,user=" + user_id + " l_curv=;p_curv=;r_curv=;map_curv=;map_rcurv=;map_rcurvx=;v_curv=;l_diverge=;r_diverge=; "
@@ -189,9 +189,10 @@ def dashboard_thread(rate=100):
       if liveStreamDataString != "":
         insertString = insertString + liveStreamFormatString + "~" + liveStreamDataString + "!"
         #print(insertString)
-        liveStreamDataString =""
-      insertString = insertString + influxFormatString + "~" + influxDataString + "!"
-      insertString = insertString + mapFormatString + "~" + mapDataString
+      if mapDataString != "":
+        insertString = insertString + mapFormatString + "~" + mapDataString + "!"
+
+      insertString = insertString + influxFormatString + "~" + influxDataString
       steerPush.send_string(insertString)
       print(len(insertString))
       frame_count = 0
@@ -199,6 +200,7 @@ def dashboard_thread(rate=100):
       kegmanDataString = ""
       mapDataString = ""
       insertString = ""
+      liveStreamDataString =""
     else:
       time.sleep(0.01)
 
