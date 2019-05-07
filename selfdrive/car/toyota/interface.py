@@ -86,13 +86,13 @@ class CarInterface(object):
     rotationalInertia_civic = 2500
     tireStiffnessFront_civic = 192150
     tireStiffnessRear_civic = 202500
-    ret.steerDampTime = 0.025       # Smooth steering rate over 12.5ms
-    ret.steerReactTime = 0.07       # Project steering rate over 70ms
+    ret.steerDampTime = 0.05        # Smooth steering rate over 12.5ms
+    ret.steerReactTime = 0.05       # Project steering rate over 70ms
     ret.steerMPCReactTime = -0.05   # Offset desired dampened desired angle by -50 ms
     ret.steerMPCDampTime = 0.18     # Project desired angle 180ms from now, but smooth it over 180ms
     ret.rateFFGain = 0.2
-    ret.steerActuatorDelay = 0.04
-    ret.steerBacklash = 0.01        # This can be used to increase or decrease deadzone
+    ret.steerActuatorDelay = 0.2    # This is a distance, not a time
+    ret.steerBacklash = 0.005       # This can be used to increase or decrease deadzone
 
     ret.steerKiBP, ret.steerKpBP = [[0.], [0.]]
 
@@ -106,7 +106,7 @@ class CarInterface(object):
       ret.steerKpV, ret.steerKiV = [[0.4], [0.05]]
       ret.steerKf = 0.0001   # full torque for 10 deg at 80mph means 0.00007818594
       # TODO: Prius seem to have very laggy actuators. Understand if it is lag or hysteresis
-      ret.steerActuatorDelay = 0.04
+      ret.steerActuatorDelay = 0.4
       ret.steerDampTime = 0.05
       ret.steerReactTime = 0.13
       ret.steerMPCReactTime = -0.05
@@ -123,13 +123,13 @@ class CarInterface(object):
       ret.mass = 3650 * CV.LB_TO_KG + std_cargo  # mean between normal and hybrid
       ret.steerKpV, ret.steerKiV = [[0.3], [0.03]] # [[0.6], [0.05]]
       ret.steerKf = 0.0001   # full torque for 10 deg at 80mph means 0.00007818594
-      ret.steerDampTime = 0.025
-      ret.steerReactTime = 0.07
+      ret.steerDampTime = 0.05
+      ret.steerReactTime = 0.04
       ret.steerMPCReactTime = -0.05
       ret.steerMPCDampTime = 0.18
       ret.rateFFGain = 0.4
-      ret.steerActuatorDelay = 0.04
-      ret.steerBacklash = 0.01
+      ret.steerActuatorDelay = 0.2
+      ret.steerBacklash = 0.005
 
     elif candidate == CAR.COROLLA:
       stop_and_go = False
