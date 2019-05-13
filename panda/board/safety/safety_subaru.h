@@ -14,11 +14,6 @@ int subaru_desired_torque_last = 0;
 uint32_t subaru_ts_last = 0;
 struct sample_t subaru_torque_driver;         // last few driver torques measured
 
-static void subaru_init(int16_t param) {
-  #ifdef PANDA
-    lline_relay_init();
-  #endif
-}
 
 static void subaru_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
   int bus_number = (to_push->RDTR >> 4) & 0xFF;
@@ -27,11 +22,6 @@ static void subaru_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
   if ((addr == 0x119) && (bus_number == 0)){
     int torque_driver_new = ((to_push->RDLR >> 16) & 0x7FF);
     torque_driver_new = to_signed(torque_driver_new, 11);
-    // update array of samples
-    update_sample(&subaru_torque_driver, torque_driver_new);
-  } else if ((addr == 0x371) && (bus_number == 0)){
-    int torque_driver_new = ((to_push->RDLR >> 29) & 0x7FF);
-    torque_driver_new = to_signed(torque_driver_new, 10);
     // update array of samples
     update_sample(&subaru_torque_driver, torque_driver_new);
   }
@@ -45,14 +35,6 @@ static void subaru_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
       controls_allowed = 0;
     }
     subaru_cruise_engaged_last = cruise_engaged;
-  } else if ((addr == 0x144) && (bus_number == 0)) {
-    int cruise_engaged = (to_push->RDHR >> 17) & 1;
-    if (cruise_engaged && !subaru_cruise_engaged_last) {
-      controls_allowed = 1;
-    } else if (!cruise_engaged) {
-      controls_allowed = 0;
-    }
-    subaru_cruise_engaged_last = cruise_engaged;
   }
 }
 
@@ -60,14 +42,8 @@ static int subaru_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   uint32_t addr = to_send->RIR >> 21;
 
   // steer cmd checks
-  if (addr == 0x122 || addr == 0x164) {
-    int desired_torque = 0;
-    if (addr == 0x122) {
-    desired_torque = ((to_send->RDLR >> 16) & 0x1FFF);
-    } else if (addr == 0x164) {
-    desired_torque = ((to_send->RDLR >> 8) & 0x1FFF);
-    }
-    
+  if (addr == 0x122) {
+    int desired_torque = ((to_send->RDLR >> 16) & 0x1FFF);
     int violation = 0;
     uint32_t ts = TIM2->CNT;
     desired_torque = to_signed(desired_torque, 13);
@@ -124,11 +100,10 @@ static int subaru_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
 
   // forward CAN 0 > 1
   if (bus_num == 0) {
-
-    return 1; // ES CAN
+    return 2; // ES CAN
   }
   // forward CAN 1 > 0, except ES_LKAS
-  else if (bus_num == 1) {
+  else if (bus_num == 2) {
 
     // outback 2015
     if (addr == 0x164) {
@@ -136,10 +111,6 @@ static int subaru_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
     }
     // global platform
     if (addr == 0x122) {
-      return -1;
-    }
-    // ES Distance
-    if (addr == 545) {
       return -1;
     }
 
@@ -151,11 +122,10 @@ static int subaru_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
 }
 
 const safety_hooks subaru_hooks = {
-  .init = subaru_init,
+  .init = nooutput_init,
   .rx = subaru_rx_hook,
   .tx = subaru_tx_hook,
   .tx_lin = nooutput_tx_lin_hook,
   .ignition = default_ign_hook,
   .fwd = subaru_fwd_hook,
-  .relay = alloutput_relay_hook,
 };

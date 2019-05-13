@@ -68,7 +68,7 @@ VisionImg visionimg_alloc_rgb24(int width, int height, VisionBuf *out_buf) {
 
 #ifdef QCOM
 
-EGLClientBuffer visionimg_to_egl(const VisionImg *img, void **pph) {
+EGLClientBuffer visionimg_to_egl(const VisionImg *img) {
   assert((img->size % img->stride) == 0);
   assert((img->stride % img->bpp) == 0);
 
@@ -87,14 +87,13 @@ EGLClientBuffer visionimg_to_egl(const VisionImg *img, void **pph) {
 
   GraphicBuffer* gb = new GraphicBuffer(img->width, img->height, (PixelFormat)format,
                                         GraphicBuffer::USAGE_HW_TEXTURE, img->stride/img->bpp, hnd, false);
-  // GraphicBuffer is ref counted by EGLClientBuffer(ANativeWindowBuffer), no need and not possible to release.
-  *pph = hnd;
+
   return (EGLClientBuffer) gb->getNativeBuffer();
 }
 
-GLuint visionimg_to_gl(const VisionImg *img, EGLImageKHR *pkhr, void **pph) {
+GLuint visionimg_to_gl(const VisionImg *img) {
 
-  EGLClientBuffer buf = visionimg_to_egl(img, pph);
+  EGLClientBuffer buf = visionimg_to_egl(img);
 
   EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   assert(display != EGL_NO_DISPLAY);
@@ -108,15 +107,8 @@ GLuint visionimg_to_gl(const VisionImg *img, EGLImageKHR *pkhr, void **pph) {
   glGenTextures(1, &tex);
   glBindTexture(GL_TEXTURE_2D, tex);
   glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
-  *pkhr = image;
-  return tex;
-}
 
-void visionimg_destroy_gl(EGLImageKHR khr, void *ph) {
-  EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-  assert(display != EGL_NO_DISPLAY);
-  eglDestroyImageKHR(display, khr);
-  delete (private_handle_t*)ph;
+  return tex;
 }
 
 #endif

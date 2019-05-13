@@ -91,7 +91,7 @@ managed_processes = {
   "controlsd": "selfdrive.controls.controlsd",
   "plannerd": "selfdrive.controls.plannerd",
   "radard": "selfdrive.controls.radard",
-  "ubloxd": ("selfdrive/locationd", ["./ubloxd"]),
+  "ubloxd": "selfdrive.locationd.ubloxd",
   "mapd": "selfdrive.mapd.mapd",
   "loggerd": ("selfdrive/loggerd", ["./loggerd"]),
   "logmessaged": "selfdrive.logmessaged",
@@ -108,6 +108,19 @@ managed_processes = {
   "gpsd": ("selfdrive/sensord", ["./gpsd"]),
   "updated": "selfdrive.updated",
   "athena": "selfdrive.athena.athenad",
+}
+# define process name with niceness factor
+mean_processes = {
+  "controlsd": -15,
+  "boardd": -14,
+  "visiond": -13,
+  "plannerd": -12,
+  "loggerd": -11,
+  "radard": -10,
+  "pandad": -9,
+  "locationd": -8,
+  "mapd": -7,
+  "sensord": -6,
 }
 android_packages = ("ai.comma.plus.offroad", "ai.comma.plus.frame")
 
@@ -197,6 +210,13 @@ def start_managed_process(name):
     cloudlog.info("starting process %s" % name)
     running[name] = Process(name=name, target=nativelauncher, args=(pargs, cwd))
   running[name].start()
+
+  if name in mean_processes:
+    try:
+      subprocess.call(["renice", "-n", str(mean_processes[name]), str(running[name].pid)])
+    except:
+      cloudlog.warning("failed to renice process %s" % name)
+
 
 def prepare_managed_process(p):
   proc = managed_processes[p]
@@ -339,7 +359,7 @@ def manager_thread():
     else:
       start_managed_process("uploader")
 
-    if msg.thermal.freeSpace < 0.05:
+    if msg.thermal.freeSpace < 0.18:
       logger_dead = True
 
     if msg.thermal.started:
@@ -391,7 +411,7 @@ def update_apks():
 
   cloudlog.info("installed apks %s" % (str(installed), ))
 
-  for app in installed.keys():
+  for app in installed.iterkeys():
 
     apk_path = os.path.join(BASEDIR, "apk/"+app+".apk")
     if not os.path.exists(apk_path):
@@ -462,7 +482,7 @@ def main():
   # support additional internal only extensions
   try:
     import selfdrive.manager_extensions
-    selfdrive.manager_extensions.register(register_managed_process) # pylint: disable=no-member
+    selfdrive.manager_extensions.register(register_managed_process)
   except ImportError:
     pass
 

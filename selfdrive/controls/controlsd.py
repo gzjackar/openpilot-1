@@ -72,7 +72,7 @@ def data_sample(CI, CC, plan_sock, path_plan_sock, thermal, calibration, health,
   if td is not None:
     overtemp = td.thermal.thermalStatus >= ThermalStatus.red
     free_space = td.thermal.freeSpace < 0.07  # under 7% of space free no enable allowed
-    low_battery = td.thermal.batteryPercent < 1 and td.thermal.chargingError  # at zero percent battery, while discharging, OP should not be allowed
+    low_battery = td.thermal.batteryPercent < 1  # at zero percent battery, OP should not be allowed
 
   # Create events for battery, temperature and disk space
   if low_battery:
@@ -244,6 +244,10 @@ def state_control(plan, path_plan, CS, CP, state, events, v_cruise_kph, v_cruise
     angle_model_bias = learn_angle_model_bias(active, CS.vEgo, angle_model_bias,
                                       path_plan.cPoly, path_plan.cProb, CS.steeringAngle,
                                       CS.steeringPressed)
+  try:
+    gasinterceptor = CP.enableGasInterceptor
+  except AttributeError:
+    gasinterceptor = False
 
   cur_time = sec_since_boot()  # TODO: This won't work in replay
   mpc_time = plan.l20MonoTime / 1e9
@@ -255,11 +259,12 @@ def state_control(plan, path_plan, CS, CP, state, events, v_cruise_kph, v_cruise
 
   # Gas/Brake PID loop
   actuators.gas, actuators.brake = LoC.update(active, CS.vEgo, CS.brakePressed, CS.standstill, CS.cruiseState.standstill,
-                                              v_cruise_kph, v_acc_sol, plan.vTargetFuture, a_acc_sol, CP)
+                                              v_cruise_kph, v_acc_sol, plan.vTargetFuture, a_acc_sol, CP, gasinterceptor, CS.gasbuttonstatus)
   # Steering PID loop and lateral MPC
-  actuators.steer, actuators.steerAngle = LaC.update(active, CS.vEgo, CS.steeringAngle,
+  actuators.steer, actuators.steerAngle = LaC.update(active, CS.vEgo, CS.steeringAngle, 
                                                      CS.steeringPressed, CP, VM, path_plan)
-
+ #BB added for ALCA support
+  #CS.pid = LaC.pid
   # Send a "steering required alert" if saturation count has reached the limit
   if LaC.sat_flag and CP.steerLimitAlert:
     AM.add("steerSaturated", enabled)
@@ -282,7 +287,7 @@ def state_control(plan, path_plan, CS, CP, state, events, v_cruise_kph, v_cruise
 
 def data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruise_kph, rk, carstate,
               carcontrol, live100, AM, driver_status,
-              LaC, LoC, angle_model_bias, passive, start_time, v_acc, a_acc):
+              LaC, LoC, angle_model_bias, passive, start_time, params, v_acc, a_acc):
   """Send actuators and hud commands to the car, send live100 and MPC logging"""
   plan_ts = plan.logMonoTime
   plan = plan.plan
@@ -305,6 +310,8 @@ def data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruis
     CC.hudControl.speedVisible = isEnabled(state)
     CC.hudControl.lanesVisible = isEnabled(state)
     CC.hudControl.leadVisible = plan.hasLead
+    CC.hudControl.rightLaneDepart = plan.hasrightLaneDepart
+    CC.hudControl.leftLaneDepart = plan.hasleftLaneDepart
     CC.hudControl.rightLaneVisible = bool(path_plan.pathPlan.rProb > 0.5)
     CC.hudControl.leftLaneVisible = bool(path_plan.pathPlan.lProb > 0.5)
     CC.hudControl.visualAlert = AM.visual_alert
@@ -327,7 +334,7 @@ def data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruis
     "alertType": AM.alert_type,
     "alertSound": "",  # no EON sounds yet
     "awarenessStatus": max(driver_status.awareness, 0.0) if isEnabled(state) else 0.0,
-    "driverMonitoringOn": bool(driver_status.monitor_on and driver_status.face_detected),
+    "driverMonitoringOn": bool(driver_status.monitor_on),
     "canMonoTimes": list(CS.canMonoTimes),
     "planMonoTime": plan_ts,
     "pathPlanMonoTime": path_plan.logMonoTime,
@@ -350,10 +357,13 @@ def data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruis
     "upSteer": float(LaC.pid.p),
     "uiSteer": float(LaC.pid.i),
     "ufSteer": float(LaC.pid.f),
+    "angleFFRatio": float(LaC.angle_ff_ratio),
     "vTargetLead": float(v_acc),
     "aTarget": float(a_acc),
     "jerkFactor": float(plan.jerkFactor),
     "angleModelBias": float(angle_model_bias),
+    "angleFFGain": float(LaC.angle_ff_gain),
+    "rateFFGain": float(LaC.rate_ff_gain),
     "gpsPlannerActive": plan.gpsPlannerActive,
     "vCurvature": plan.vCurvature,
     "decelForTurn": plan.decelForTurn,
@@ -377,6 +387,9 @@ def data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruis
   cc_send.carControl = CC
   carcontrol.send(cc_send.to_bytes())
 
+  if (rk.frame % 36000) == 0:    # update angle offset every 6 minutes
+    params.put("ControlsParams", json.dumps({'angle_model_bias': angle_model_bias,
+              'angle_ff_gain': LaC.angle_ff_gain, 'rate_ff_gain': LaC.rate_ff_gain}))
   return CC
 
 
@@ -457,6 +470,7 @@ def controlsd_thread(gctx=None, rate=100):
   path_plan.init('pathPlan')
 
   rk = Ratekeeper(rate, print_delay_threshold=2. / 1000)
+
   controls_params = params.get("ControlsParams")
 
   # Read angle offset from previous drive
@@ -465,6 +479,8 @@ def controlsd_thread(gctx=None, rate=100):
     try:
       controls_params = json.loads(controls_params)
       angle_model_bias = controls_params['angle_model_bias']
+      LaC.angle_ff_gain = max(1.0, controls_params['angle_ff_gain'])
+      LaC.rate_ff_gain = min(0.01, controls_params['rate_ff_gain'])
     except (ValueError, KeyError):
       pass
 
@@ -509,7 +525,7 @@ def controlsd_thread(gctx=None, rate=100):
 
     # Publish data
     CC = data_send(plan, path_plan, CS, CI, CP, VM, state, events, actuators, v_cruise_kph, rk, carstate, carcontrol,
-                   live100, AM, driver_status, LaC, LoC, angle_model_bias, passive, start_time, v_acc, a_acc)
+                   live100, AM, driver_status, LaC, LoC, angle_model_bias, passive, start_time, params, v_acc, a_acc)
     prof.checkpoint("Sent")
 
     rk.keep_time()  # Run at 100Hz

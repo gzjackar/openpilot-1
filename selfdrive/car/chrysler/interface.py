@@ -27,6 +27,7 @@ class CarInterface(object):
 
     # *** init the major players ***
     self.CS = CarState(CP)
+
     self.cp = get_can_parser(CP)
     self.cp_cam = get_camera_parser(CP)
 
@@ -72,16 +73,16 @@ class CarInterface(object):
     # Speed conversion:              20, 45 mph
     ret.steerKpBP, ret.steerKiBP = [[9., 20.], [9., 20.]]
     ret.wheelbase = 3.089  # in meters for Pacifica Hybrid 2017
-    ret.steerRatio = 16.2 # Pacifica Hybrid 2017
+    ret.steerRatio = 12.0 # 0.5.10
     ret.mass = 2858 + std_cargo  # kg curb weight Pacifica Hybrid 2017
     ret.steerKpV, ret.steerKiV =   [[0.15,0.30], [0.03,0.05]]
     ret.steerKf = 0.00006   # full torque for 10 deg at 80mph means 0.00007818594
     ret.steerActuatorDelay = 0.1
     ret.steerRateCost = 0.7
 
-    if candidate in (CAR.JEEP_CHEROKEE, CAR.JEEP_CHEROKEE_2019):
+    if candidate in (CAR.JEEP_CHEROKEE_2017, CAR.JEEP_CHEROKEE_2018, CAR.JEEP_CHEROKEE_2019):
       ret.wheelbase = 2.91  # in meters
-      ret.steerRatio = 12.7
+      ret.steerRatio = 11.6 # 0.5.10
       ret.steerActuatorDelay = 0.2  # in seconds
 
     ret.centerToFront = ret.wheelbase * 0.44
@@ -94,7 +95,7 @@ class CarInterface(object):
     if candidate in (CAR.PACIFICA_2019_HYBRID, CAR.JEEP_CHEROKEE_2019):
       ret.minSteerSpeed = 17.5  # m/s 17 on the way up, 13 on the way down once engaged.
       # TODO allow 2019 cars to steer down to 13 m/s if already engaged.
-
+      
     centerToRear = ret.wheelbase - ret.centerToFront
     # TODO: get actual value, for now starting with reasonable value for
     # civic and scaling by mass and wheelbase
@@ -122,7 +123,7 @@ class CarInterface(object):
     ret.brakeMaxV = [1., 0.8]
 
     ret.enableCamera = not check_ecu_msgs(fingerprint, ECU.CAM)
-    print("ECU Camera Simulated: {0}".format(ret.enableCamera))
+    print "ECU Camera Simulated: ", ret.enableCamera
     ret.openpilotLongitudinalControl = False
 
     ret.steerLimitAlert = True
@@ -140,6 +141,7 @@ class CarInterface(object):
   def update(self, c):
     # ******************* do can recv *******************
     canMonoTimes = []
+
     self.cp.update(int(sec_since_boot() * 1e9), False)
     self.cp_cam.update(int(sec_since_boot() * 1e9), False)
     self.CS.update(self.cp, self.cp_cam)
@@ -185,6 +187,13 @@ class CarInterface(object):
     # ignore standstill in hybrid rav4, since pcm allows to restart without
     # receiving any special command
     ret.cruiseState.standstill = False
+    
+    ret.readdistancelines = 1
+    ret.genericToggle = False
+    ret.laneDepartureToggle = False
+    ret.distanceToggle = 1
+    ret.accSlowToggle = False
+    ret.blindspot = False
 
     # TODO: button presses
     buttonEvents = []
@@ -210,9 +219,13 @@ class CarInterface(object):
     self.low_speed_alert = (ret.vEgo < self.CP.minSteerSpeed)
 
     ret.genericToggle = self.CS.generic_toggle
-    #ret.lkasCounter = self.CS.lkas_counter
-    #ret.lkasCarModel = self.CS.lkas_car_model
 
+    if ret.cruiseState.enabled and not self.cruise_enabled_prev:
+      disengage_event = True
+    else:
+      disengage_event = False
+    
+    ret.gasbuttonstatus = self.CS.gasMode
     # events
     events = []
     if not self.CS.can_valid:
@@ -223,9 +236,9 @@ class CarInterface(object):
       self.can_invalid_count = 0
     if not (ret.gearShifter in ('drive', 'low')):
       events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.doorOpen:
+    if ret.doorOpen and disengage_event:
       events.append(create_event('doorOpen', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.seatbeltUnlatched:
+    if ret.seatbeltUnlatched and disengage_event:
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.esp_disabled:
       events.append(create_event('espDisabled', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
@@ -243,8 +256,9 @@ class CarInterface(object):
 
     # disable on gas pedal and speed isn't zero. Gas pedal is used to resume ACC
     # from a 3+ second stop.
-    if (ret.gasPressed and (not self.gas_pressed_prev) and ret.vEgo > 2.0):
-      events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
+    if self.CS.cstm_btns.get_button_status("mad") == 0:
+      if (ret.gasPressed and (not self.gas_pressed_prev) and ret.vEgo > 2.0):
+        events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
 
     if self.low_speed_alert:
       events.append(create_event('belowSteerSpeed', [ET.WARNING]))

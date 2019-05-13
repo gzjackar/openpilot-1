@@ -1,25 +1,13 @@
-Version 0.5.11 (2019-04-17)
-========================
- * Add support for Subaru
- * Reduce panda power consumption by 60% when car is off
- * Fix controlsd lag every 6 minutes. This would sometimes cause disengagements
- * Fix bug in controls with new angle-offset learner in MPC
- * Reduce cpu consumption of ubloxd by rewriting it in C++
- * Improve driver monitoring model and face detection
- * Improve performance of visiond and ui
- * Honda Passport 2019 support
- * Lexus RX Hybrid 2019 support thanks to schomems!
-
 Version 0.5.10 (2019-03-19)
 ========================
- * Self-tuning vehicle parameters: steering offset, tire stiffness and steering ratio
+ * Self-tuning vehicle parameters: steering offset, tires stiffness and steering ratio
  * Improve longitudinal control at low speed when lead vehicle harshly decelerates
  * Fix panda bug going unexpectedly in DCP mode when EON is connected
  * Reduce white panda power consumption by 500mW when EON is disconnected by turning off WIFI
  * New Driver Monitoring Model
  * Support QR codes for login using comma connect
- * Refactor comma pedal FW and use CRC-8 checksum algorithm for safety. Reflashing pedal is required.
-   Please see `#hw-pedal` on [discord](discord.comma.ai) for assistance updating comma pedal.
+ * Refactor comma pedal FW and use CRC-8 checksum algorithm for safety. Reflashing pedal is required. 
+   Please see `#hw-pedal` on [discord](discord.comma.ai) for assistance updating comma pedal. 
  * Additional speed limit rules for Germany thanks to arne182
  * Allow negative speed limit offsets
 
@@ -53,7 +41,7 @@ Version 0.5.7 (2018-12-06)
  * Cadillac ATS support thanks to vntarasov!
  * GMC Acadia support thanks to CryptoKylan!
  * Decrease GPU power consumption
- * NEOSv8 autoupdate
+ * no NEOSv8 autoupdate
 
 Version 0.5.6 (2018-11-16)
 ========================

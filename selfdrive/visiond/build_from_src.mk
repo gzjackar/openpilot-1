@@ -58,8 +58,7 @@ endif
   OPENCV_FLAGS =
   OPENCV_LIBS = -lopencv_video \
                 -lopencv_imgproc \
-                -lopencv_core \
-                -lopencv_highgui
+                -lopencv_core
   OTHER_LIBS = -lz -lm -lpthread
 
   PLATFORM_OBJS = camera_fake.o \
@@ -110,7 +109,7 @@ else
 endif
 
 OBJS = visiond.o
-OUTPUT = visiond
+OUTPUT = visiond-normal
 
 .PHONY: all
 all: $(OUTPUT)
@@ -128,7 +127,6 @@ OBJS += $(PLATFORM_OBJS) \
         ../common/buffering.o \
         transform.o \
         loadyuv.o \
-        rgb_to_yuv.o \
         commonmodel.o \
         snpemodel.o \
         monitoring.o \
@@ -171,16 +169,6 @@ LDFLAGS += -s
 endif
 
 DEPS := $(OBJS:.o=.d)
-
-rgb_to_yuv_test:  rgb_to_yuv_test.o clutil.o rgb_to_yuv.o ../common/util.o
-	@echo "[ LINK ] $@"
-	$(CXX) -fPIC -o '$@' $^ \
-        $(LIBYUV_LIBS) \
-        $(LDFLAGS) \
-        -L/usr/lib \
-        -L/system/vendor/lib64 \
-        $(OPENCL_LIBS) \
-
 
 $(OUTPUT): $(OBJS)
 	@echo "[ LINK ] $@"
@@ -234,6 +222,6 @@ $(MODEL_OBJS): %.o: %.dlc
 
 .PHONY: clean
 clean:
-	rm -f visiond rgb_to_yuv_test rgb_to_yuv_test.o $(OBJS) $(DEPS)
+	rm -f visiond-normal $(OBJS) $(DEPS)
 
 -include $(DEPS)

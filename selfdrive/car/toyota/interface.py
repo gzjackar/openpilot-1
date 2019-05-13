@@ -7,7 +7,10 @@ from selfdrive.controls.lib.vehicle_model import VehicleModel
 from selfdrive.car.toyota.carstate import CarState, get_can_parser, get_cam_can_parser
 from selfdrive.car.toyota.values import ECU, check_ecu_msgs, CAR
 from selfdrive.swaglog import cloudlog
+import selfdrive.kegman_conf as kegman
 
+steeringAngleoffset = float(kegman.conf['angle_steers_offset'])  # deg offset
+   
 try:
   from selfdrive.car.toyota.carcontroller import CarController
 except ImportError:
@@ -54,7 +57,6 @@ class CarInterface(object):
     std_cargo = 136
 
     ret = car.CarParams.new_message()
-
     ret.carName = "toyota"
     ret.carFingerprint = candidate
 
@@ -74,79 +76,167 @@ class CarInterface(object):
     tireStiffnessRear_civic = 202500
 
     ret.steerKiBP, ret.steerKpBP = [[0.], [0.]]
-    ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
+    ret.steerActuatorDelay = 0.001  # Default delay, Prius has larger delay
 
     if candidate == CAR.PRIUS:
       stop_and_go = True
       ret.safetyParam = 66  # see conversion factor for STEER_TORQUE_EPS in dbc file
       ret.wheelbase = 2.70
-      ret.steerRatio = 15.00   # unknown end-to-end spec
-      tire_stiffness_factor = 0.6371   # hand-tune
-      ret.mass = 3045 * CV.LB_TO_KG + std_cargo
-      ret.steerKpV, ret.steerKiV = [[0.4], [0.01]]
-      ret.steerKf = 0.00006   # full torque for 10 deg at 80mph means 0.00007818594
+      ret.steerRatio = 16.26   # 0.5.10 auto tune
+      tire_stiffness_factor = 0.7549   # hand-tune by Gernby
+      ret.mass = 3375 * CV.LB_TO_KG + std_cargo
+      ret.steerKpV, ret.steerKiV = [[0.4], [0.05]]
+      ret.steerKf = 0.0001   # full torque for 10 deg at 80mph means 0.00007818594
       # TODO: Prius seem to have very laggy actuators. Understand if it is lag or hysteresis
-      ret.steerActuatorDelay = 0.25
+      ret.steerActuatorDelay = 0.018
+      #ret.steerKiBP, ret.steerKpBP = [[0.,27.,47.], [0.,27.,47.]]
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 2.4, 1.5]
+        ret.longitudinalKiV = [0.54, 0.36]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 2.4, 1.5]
+        ret.longitudinalKiV = [0.54, 0.36]
 
-    elif candidate in [CAR.RAV4, CAR.RAV4H]:
-      stop_and_go = True if (candidate in CAR.RAV4H) else False
+    elif candidate in [CAR.RAV4]:
       ret.safetyParam = 73  # see conversion factor for STEER_TORQUE_EPS in dbc file
+      ret.wheelbase = 2.66 # 2.65 default
+      ret.steerRatio = 17.28 # Rav4 0.5.10 tuning value
+      ret.mass = 4100./2.205 + std_cargo  # mean between normal and hybrid
+      ret.steerKpV, ret.steerKiV = [[0.3], [0.03]] #0.6 0.05 default
       ret.wheelbase = 2.65
-      ret.steerRatio = 16.30   # 14.5 is spec end-to-end
       tire_stiffness_factor = 0.5533
-      ret.mass = 3650 * CV.LB_TO_KG + std_cargo  # mean between normal and hybrid
-      ret.steerKpV, ret.steerKiV = [[0.6], [0.05]]
-      ret.steerKf = 0.00006   # full torque for 10 deg at 80mph means 0.00007818594
-
+      ret.steerKf = 0.00001 # full torque for 10 deg at 80mph means 0.00007818594
+      if ret.enableGasInterceptor:
+        stop_and_go = True
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [0.028, 0.364, 0.24]  # tuned braking for higher brake limit
+        ret.longitudinalKiV = [0.02, 0.05]
+      else:
+        stop_and_go = False
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
+    elif candidate in [CAR.RAV4H]:
+      stop_and_go = True
+      ret.safetyParam = 73  # see conversion factor for STEER_TORQUE_EPS in dbc file
+      ret.wheelbase = 2.65 # 2.65 default
+      ret.steerRatio = 16.53 # 0.5.10 tuning
+      ret.mass = 4100./2.205 + std_cargo  # mean between normal and hybrid
+      ret.steerKpV, ret.steerKiV = [[0.3], [0.03]] #0.6 0.05 default
+      ret.wheelbase = 2.65
+      tire_stiffness_factor = 0.5533
+      ret.steerKf = 0.0001 # full torque for 10 deg at 80mph means 0.00007818594
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.2, 0.8, 0.5]
+        ret.longitudinalKiV = [0.18, 0.12]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.0, 0.5, 0.3]
+        ret.longitudinalKiV = [0.20, 0.10]
+    elif candidate == CAR.RAV4_2019:
+      stop_and_go = True
+      ret.safetyParam = 100
+      ret.wheelbase = 2.68986
+      ret.steerRatio = 17.0
+      tire_stiffness_factor = 0.7933
+      ret.mass = 3370. * CV.LB_TO_KG + std_cargo
+      ret.steerKpV, ret.steerKiV = [[0.3], [0.05]]
+      ret.steerKf = 0.0001
+      ret.longitudinalKpV = [2.0, 1.0, 0.8]
+      ret.longitudinalKiV = [0.25, 0.14]
+      ret.gasMaxV = [0.2, 0.5, 0.7]
     elif candidate == CAR.COROLLA:
       stop_and_go = False
       ret.safetyParam = 100 # see conversion factor for STEER_TORQUE_EPS in dbc file
       ret.wheelbase = 2.70
-      ret.steerRatio = 17.8
-      tire_stiffness_factor = 0.444
+      ret.steerRatio = 17.84 # 0.5.10
+      tire_stiffness_factor = 1.01794
       ret.mass = 2860 * CV.LB_TO_KG + std_cargo  # mean between normal and hybrid
       ret.steerKpV, ret.steerKiV = [[0.2], [0.05]]
-      ret.steerKf = 0.00003   # full torque for 20 deg at 80mph means 0.00007818594
+      ret.steerKf = 0.00003909297   # full torque for 20 deg at 80mph means 0.00007818594
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [0.333, 0.364, 0.15]  # tuned braking for higher brake limit
+        ret.longitudinalKiV = [0.07, 0.05]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
 
     elif candidate == CAR.LEXUS_RXH:
       stop_and_go = True
       ret.safetyParam = 100 # see conversion factor for STEER_TORQUE_EPS in dbc file
       ret.wheelbase = 2.79
-      ret.steerRatio = 16.  # 14.8 is spec end-to-end
-      tire_stiffness_factor = 0.444  # not optimized yet
+      ret.steerRatio = 18.6  # 0.5.10
+      tire_stiffness_factor = 0.517  # 0.5.10
       ret.mass = 4481 * CV.LB_TO_KG + std_cargo  # mean between min and max
-      ret.steerKpV, ret.steerKiV = [[0.6], [0.1]]
-      ret.steerKf = 0.00006   # full torque for 10 deg at 80mph means 0.00007818594
+      ret.steerKpV, ret.steerKiV = [[0.2], [0.02]]
+      ret.steerKf = 0.00007   # full torque for 10 deg at 80mph means 0.00007818594
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [0.333, 0.364, 0.15]  # tuned braking for higher brake limit
+        ret.longitudinalKiV = [0.07, 0.05]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.0, 0.5, 0.3]  # tuned braking for higher brake limit
+        ret.longitudinalKiV = [0.2, 0.1]
 
     elif candidate in [CAR.CHR, CAR.CHRH]:
       stop_and_go = True
       ret.safetyParam = 100
       ret.wheelbase = 2.63906
-      ret.steerRatio = 13.6
+      ret.steerRatio = 15.6
       tire_stiffness_factor = 0.7933
       ret.mass = 3300. * CV.LB_TO_KG + std_cargo
-      ret.steerKpV, ret.steerKiV = [[0.723], [0.0428]]
-      ret.steerKf = 0.00006
+      ret.steerKpV, ret.steerKiV = [[0.3], [0.03]]
+      ret.steerKf = 0.0001
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.2, 0.8, 0.5]
+        ret.longitudinalKiV = [0.18, 0.12]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
 
     elif candidate in [CAR.CAMRY, CAR.CAMRYH]:
       stop_and_go = True
       ret.safetyParam = 100
       ret.wheelbase = 2.82448
-      ret.steerRatio = 13.7
+      ret.steerRatio = 17.7 # 0.5.10
       tire_stiffness_factor = 0.7933
       ret.mass = 3400 * CV.LB_TO_KG + std_cargo #mean between normal and hybrid
-      ret.steerKpV, ret.steerKiV = [[0.3], [0.1]]
-      ret.steerKf = 0.00007
+      ret.steerKpV, ret.steerKiV = [[0.3], [0.03]]
+      ret.steerKf = 0.0001
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.2, 0.8, 0.5]
+        ret.longitudinalKiV = [0.18, 0.12]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
 
     elif candidate in [CAR.HIGHLANDER, CAR.HIGHLANDERH]:
       stop_and_go = True
       ret.safetyParam = 100
       ret.wheelbase = 2.78
-      ret.steerRatio = 16.0
+      ret.steerRatio = 17.36 # 0.5.10
       tire_stiffness_factor = 0.444 # not optimized yet
       ret.mass = 4607 * CV.LB_TO_KG + std_cargo #mean between normal and hybrid limited
-      ret.steerKpV, ret.steerKiV = [[0.6], [0.05]]
-      ret.steerKf = 0.00006
+      ret.steerKpV, ret.steerKiV = [[0.18], [0.0075]]
+      ret.steerKf = 0.00015
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.2, 0.8, 0.5]
+        ret.longitudinalKiV = [0.18, 0.12]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
 
     ret.steerRateCost = 1.
     ret.centerToFront = ret.wheelbase * 0.44
@@ -183,6 +273,8 @@ class CarInterface(object):
     # steer, gas, brake limitations VS speed
     ret.steerMaxBP = [16. * CV.KPH_TO_MS, 45. * CV.KPH_TO_MS]  # breakpoints at 1 and 40 kph
     ret.steerMaxV = [1., 1.]  # 2/3rd torque allowed above 45 kph
+    ret.gasMaxBP = [0., 9., 35.]
+    #ret.gasMaxV = [0.2, 0.5, 0.7]
     ret.brakeMaxBP = [5., 20.]
     ret.brakeMaxV = [1., 0.8]
 
@@ -196,34 +288,24 @@ class CarInterface(object):
     cloudlog.warn("ECU Gas Interceptor: %r", ret.enableGasInterceptor)
 
     ret.steerLimitAlert = False
-    ret.longitudinalKpBP = [0., 5., 35.]
-    ret.longitudinalKiBP = [0., 35.]
+    ret.longitudinalKpBP = [0., 5., 55.]
+    ret.longitudinalKiBP = [0., 55.]
     ret.stoppingControl = False
     ret.startAccel = 0.0
 
-    if ret.enableGasInterceptor:
-      ret.gasMaxBP = [0., 9., 35]
-      ret.gasMaxV = [0.2, 0.5, 0.7]
-      ret.longitudinalKpV = [1.2, 0.8, 0.5]
-      ret.longitudinalKiV = [0.18, 0.12]
-    else:
-      ret.gasMaxBP = [0.]
-      ret.gasMaxV = [0.5]
-      ret.longitudinalKpV = [3.6, 2.4, 1.5]
-      ret.longitudinalKiV = [0.54, 0.36]
-
+    ret.longitudinalKpBP = [0., 5., 55.]
+    ret.longitudinalKiBP = [0., 55.]
+    
+  # returns a car.CarState
     return ret
 
-  # returns a car.CarState
   def update(self, c):
     # ******************* do can recv *******************
     canMonoTimes = []
 
     self.cp.update(int(sec_since_boot() * 1e9), False)
-
-    # run the cam can update for 10s as we just need to know if the camera is alive
-    if self.frame < 1000:
-      self.cp_cam.update(int(sec_since_boot() * 1e9), False)
+    
+    self.cp_cam.update(int(sec_since_boot() * 1e9), False)
 
     self.CS.update(self.cp, self.cp_cam)
 
@@ -258,7 +340,7 @@ class CarInterface(object):
     ret.brakeLights = self.CS.brake_lights
 
     # steering wheel
-    ret.steeringAngle = self.CS.angle_steers
+    ret.steeringAngle = self.CS.angle_steers + steeringAngleoffset
     ret.steeringRate = self.CS.angle_steers_rate
 
     ret.steeringTorque = self.CS.steer_torque_driver
@@ -270,7 +352,7 @@ class CarInterface(object):
     ret.cruiseState.available = bool(self.CS.main_on)
     ret.cruiseState.speedOffset = 0.
 
-    if self.CP.carFingerprint in [CAR.RAV4H, CAR.HIGHLANDERH, CAR.HIGHLANDER] or self.CP.enableGasInterceptor:
+    if self.CP.carFingerprint in [CAR.RAV4H, CAR.HIGHLANDERH, CAR.HIGHLANDER, CAR.RAV4_2019] or self.CP.enableGasInterceptor:
       # ignore standstill in hybrid vehicles, since pcm allows to restart without
       # receiving any special command
       # also if interceptor is detected
@@ -294,12 +376,24 @@ class CarInterface(object):
     ret.buttonEvents = buttonEvents
     ret.leftBlinker = bool(self.CS.left_blinker_on)
     ret.rightBlinker = bool(self.CS.right_blinker_on)
-
+    #ret.leftline = self.CS.left_line
+    #ret.rightline = self.CS.right_line
+    #ret.lkasbarriers = self.CS.lkas_barriers
+    ret.blindspot = self.CS.blind_spot_on
+    ret.blindspotside = self.CS.blind_spot_side
     ret.doorOpen = not self.CS.door_all_closed
     ret.seatbeltUnlatched = not self.CS.seatbelt
 
     ret.genericToggle = self.CS.generic_toggle
-
+    ret.laneDepartureToggle = self.CS.lane_departure_toggle_on
+    ret.distanceToggle = self.CS.distance_toggle
+    ret.accSlowToggle = self.CS.acc_slow_on
+    ret.readdistancelines = self.CS.read_distance_lines
+    ret.gasbuttonstatus = self.CS.gasMode
+    if self.CS.sport_on == 1:
+      ret.gasbuttonstatus = 1
+    if self.CS.econ_on == 1:
+      ret.gasbuttonstatus = 2
     # events
     events = []
     if not self.CS.can_valid:
@@ -314,11 +408,16 @@ class CarInterface(object):
       if self.cam_can_valid_count >= 5:
         self.forwarding_camera = True
 
+    if ret.cruiseState.enabled and not self.cruise_enabled_prev:
+      disengage_event = True
+    else:
+      disengage_event = False
+
     if not ret.gearShifter == 'drive' and self.CP.enableDsu:
       events.append(create_event('wrongGear', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.doorOpen:
+    if ret.doorOpen and disengage_event:
       events.append(create_event('doorOpen', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
-    if ret.seatbeltUnlatched:
+    if ret.seatbeltUnlatched and disengage_event:
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
     if self.CS.esp_disabled and self.CP.enableDsu:
       events.append(create_event('espDisabled', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
@@ -330,6 +429,8 @@ class CarInterface(object):
       events.append(create_event('steerTempUnavailable', [ET.NO_ENTRY, ET.WARNING]))
     if self.CS.low_speed_lockout and self.CP.enableDsu:
       events.append(create_event('lowSpeedLockout', [ET.NO_ENTRY, ET.PERMANENT]))
+    if self.CS.steer_unavailable:
+      events.append(create_event('steerTempUnavailableNoCancel', [ET.WARNING]))
     if ret.vEgo < self.CP.minEnableSpeed and self.CP.enableDsu:
       events.append(create_event('speedTooLow', [ET.NO_ENTRY]))
       if c.actuators.gas > 0.1:
@@ -368,8 +469,8 @@ class CarInterface(object):
 
     self.CC.update(self.sendcan, c.enabled, self.CS, self.frame,
                    c.actuators, c.cruiseControl.cancel, c.hudControl.visualAlert,
-                   c.hudControl.audibleAlert, self.forwarding_camera,
-                   c.hudControl.leftLaneVisible, c.hudControl.rightLaneVisible, c.hudControl.leadVisible)
+                   c.hudControl.audibleAlert, self.forwarding_camera, c.hudControl.leftLaneVisible, 
+                   c.hudControl.rightLaneVisible, c.hudControl.leadVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart)
 
     self.frame += 1
     return False

@@ -391,6 +391,9 @@ struct Live100Data {
   upSteer @8 :Float32;
   uiSteer @9 :Float32;
   ufSteer @34 :Float32;
+  angleFFRatio @52 :Float32;
+  rateFFGain @53 :Float32;
+  angleFFGain @54 :Float32;
   aTargetMinDEPRECATED @10 :Float32;
   aTargetMaxDEPRECATED @11 :Float32;
   aTarget @35 :Float32;
@@ -563,11 +566,13 @@ struct Plan {
   aTargetMaxDEPRECATED @5 :Float32;
   aTarget @18 :Float32;
 
-  vStart @26 :Float32;
-  aStart @27 :Float32;
+  vStart @29 :Float32;
+  aStart @28 :Float32;
 
   jerkFactor @6 :Float32;
   hasLead @7 :Bool;
+  hasleftLaneDepart @25 :Bool;
+  hasrightLaneDepart @26 :Bool;
   hasLeftLaneDEPRECATED @23 :Bool;
   hasRightLaneDEPRECATED @24 :Bool;
   fcw @8 :Bool;
@@ -581,10 +586,11 @@ struct Plan {
   # maps
   vCurvature @21 :Float32;
   decelForTurn @22 :Bool;
-  mapValid @25 :Bool;
-  radarValid @28 :Bool;
+  mapValid @27 :Bool;
+  radarValid @30 :Bool;
 
-  processingDelay @29 :Float32;
+  processingDelay @31 :Float32;
+
 
 
   struct GpsTrajectory {
@@ -1633,6 +1639,15 @@ struct LiveMapData {
   distToTurn @10 :Float32;
   mapValid @11 :Bool;
 }
+struct LiveTrafficData {
+  speedLimitValid @0 :Bool;
+  speedLimit @1 :Float32;
+  speedAdvisoryValid @2 :Bool;
+  speedAdvisory @3 :Float32;
+}  
+struct LatControl {
+  anglelater @0 :Float32;
+}
 
 struct CameraOdometry {
   trans @0 :List(Float32); # m/s in device frame
@@ -1715,8 +1730,10 @@ struct Event {
     boot @60 :Boot;
     liveParameters @61 :LiveParametersData;
     liveMapData @62 :LiveMapData;
-    cameraOdometry @63 :CameraOdometry;
-    pathPlan @64 :PathPlan;
-    kalmanOdometry @65 :KalmanOdometry;
+    latControl @63 :LatControl;
+    cameraOdometry @64 :CameraOdometry;
+    pathPlan @65 :PathPlan;
+    kalmanOdometry @66 :KalmanOdometry;
+    liveTrafficData @67 :LiveTrafficData;
   }
 }

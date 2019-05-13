@@ -22,7 +22,7 @@ class LogMessageHandler(logging.Handler):
       self.connect()
 
     msg = self.format(record).rstrip('\n')
-    # print("SEND".format(repr(msg)))
+    # print "SEND", repr(msg)
     try:
       self.sock.send(chr(record.levelno)+msg, zmq.NOBLOCK)
     except zmq.error.Again:

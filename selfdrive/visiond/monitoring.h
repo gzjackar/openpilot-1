@@ -8,10 +8,10 @@
 extern "C" {
 #endif
 
-#define OUTPUT_SIZE 8
+#define OUTPUT_SIZE 7
 
 typedef struct MonitoringResult {
-  float vs[OUTPUT_SIZE - 1];
+  float vs[6];
   float std;
 } MonitoringResult;
 

@@ -5,6 +5,7 @@ from common.realtime import sec_since_boot
 from common.fingerprints import eliminate_incompatible_cars, all_known_cars
 from selfdrive.swaglog import cloudlog
 import selfdrive.messaging as messaging
+import selfdrive.crash as crash
 
 def load_interfaces(x):
   ret = {}
@@ -71,7 +72,7 @@ def fingerprint(logcan, timeout):
     # broadcast immediately
     if len(candidate_cars) == 1 and st is not None:
       # TODO: better way to decide to wait more if Toyota
-      time_fingerprint = 1.0 if ("TOYOTA" in candidate_cars[0] or "LEXUS" in candidate_cars[0]) else 0.1
+      time_fingerprint = 0.6 if ("TOYOTA" in candidate_cars[0] or "LEXUS" in candidate_cars[0]) else 0.1
       if (ts-st) > time_fingerprint:
         break
 
@@ -80,8 +81,24 @@ def fingerprint(logcan, timeout):
       return None, finger
 
     time.sleep(0.01)
-
+  try:
+    with open("/data/kegman.json", "r") as f:
+      cloudlog.warning(str(f.read()))
+  except:
+    pass
+  try:
+    with open("/data/params/d/ControlsParams", "r") as f:
+      cloudlog.warning(f.read())
+  except:
+    pass
+  try:
+    with open("/data/params/d/LiveParameters", "r") as f:
+      cloudlog.warning(f.read())
+  except:
+    pass
+  
   cloudlog.warning("fingerprinted %s", candidate_cars[0])
+  
   return (candidate_cars[0], finger)
 
 
@@ -96,7 +113,13 @@ def get_car(logcan, sendcan=None, passive=True):
       candidate = "mock"
     else:
       return None, None
-
+  else:
+    cloudlog.warning("car does match fingerprint: %r", fingerprints)
+    try:
+      crash.capture_warning("fingerprinted %s" % candidate)
+    except:  # fixes occasional travis errors
+      pass
+    
   interface_cls = interfaces[candidate]
 
   if interface_cls is None:

@@ -4,8 +4,10 @@ import fcntl
 import hashlib
 from cffi import FFI
 
+TMPDIR = "/tmp/ccache"
 
-def ffi_wrap(name, c_code, c_header, tmpdir="/tmp/ccache", cflags="", libraries=None):
+
+def ffi_wrap(name, c_code, c_header, tmpdir=TMPDIR, cflags="", libraries=None):
   if libraries is None:
     libraries = []
 
@@ -22,7 +24,7 @@ def ffi_wrap(name, c_code, c_header, tmpdir="/tmp/ccache", cflags="", libraries=
     try:
       mod = __import__(cache)
     except Exception:
-      print("cache miss {0}".format(cache))
+      print "cache miss", cache
       compile_code(cache, c_code, c_header, tmpdir, cflags, libraries)
       mod = __import__(cache)
   finally:
