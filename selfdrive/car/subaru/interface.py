@@ -5,7 +5,7 @@ from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from selfdrive.controls.lib.vehicle_model import VehicleModel
 from selfdrive.car.subaru.values import CAR
-from selfdrive.car.subaru.carstate import CarState, get_powertrain_can_parser
+from selfdrive.car.subaru.carstate import CarState, get_powertrain_can_parser, get_camera_can_parser
 
 try:
   from selfdrive.car.subaru.carcontroller import CarController
@@ -20,11 +20,15 @@ class CarInterface(object):
     self.frame = 0
     self.can_invalid_count = 0
     self.acc_active_prev = 0
+    self.gas_pressed_prev = False
 
     # *** init the major players ***
     self.CS = CarState(CP)
     self.VM = VehicleModel(CP)
     self.pt_cp = get_powertrain_can_parser(CP)
+    self.cam_cp = get_camera_can_parser(CP)
+
+    self.gas_pressed_prev = False
 
     # sending if read only is False
     if sendcan is not None:
@@ -47,14 +51,15 @@ class CarInterface(object):
     ret.carFingerprint = candidate
     ret.safetyModel = car.CarParams.SafetyModels.subaru
 
-    ret.enableCruise = False
+    ret.enableCruise = True
     ret.steerLimitAlert = True
+
     ret.enableCamera = True
 
     std_cargo = 136
     ret.steerRateCost = 0.7
 
-    if candidate in [CAR.IMPREZA]:
+    if candidate in [CAR.IMPREZA, CAR.XV]:
       ret.mass = 1568 + std_cargo
       ret.wheelbase = 2.67
       ret.centerToFront = ret.wheelbase * 0.5
@@ -64,6 +69,32 @@ class CarInterface(object):
       ret.steerKf = 0.00005
       ret.steerKiBP, ret.steerKpBP = [[0., 20.], [0., 20.]]
       ret.steerKpV, ret.steerKiV = [[0.2, 0.3], [0.02, 0.03]]
+      ret.steerMaxBP = [0.] # m/s
+      ret.steerMaxV = [1.]
+
+    if candidate in [CAR.OUTBACK]:
+      ret.mass = 1568 + std_cargo
+      ret.wheelbase = 2.67
+      ret.centerToFront = ret.wheelbase * 0.5
+      ret.steerRatio = 20            # learned, 14 stock
+      tire_stiffness_factor = 0.78
+      ret.steerActuatorDelay = 0.4
+      ret.steerKf = 0.00003
+      ret.steerKiBP, ret.steerKpBP = [[0.,10.], [0.,10.]]
+      ret.steerKpV, ret.steerKiV = [[0.07,0.15], [0.02,0.02]]
+      ret.steerMaxBP = [0.] # m/s
+      ret.steerMaxV = [1.]
+
+    if candidate in [CAR.LEGACY]:
+      ret.mass = 1568 + std_cargo
+      ret.wheelbase = 2.67
+      ret.centerToFront = ret.wheelbase * 0.5
+      ret.steerRatio = 14.5
+      tire_stiffness_factor = 1.0
+      ret.steerActuatorDelay = 0.4
+      ret.steerKf = 0.00005
+      ret.steerKiBP, ret.steerKpBP = [[0., 20.], [0., 20.]]
+      ret.steerKpV, ret.steerKiV = [[0.1, 0.2], [0.01, 0.02]]
       ret.steerMaxBP = [0.] # m/s
       ret.steerMaxV = [1.]
 
@@ -116,7 +147,8 @@ class CarInterface(object):
   def update(self, c):
 
     self.pt_cp.update(int(sec_since_boot() * 1e9), False)
-    self.CS.update(self.pt_cp)
+    self.cam_cp.update(int(sec_since_boot() * 1e9), False)
+    self.CS.update(self.pt_cp, self.cam_cp)
 
     # create message
     ret = car.CarState.new_message()
@@ -140,11 +172,19 @@ class CarInterface(object):
     ret.steeringPressed = self.CS.steer_override
     ret.steeringTorque = self.CS.steer_torque_driver
 
+    ret.gas = self.CS.pedal_gas / 255.
+    ret.gasPressed = self.CS.user_gas_pressed
+
     # cruise state
+    ret.cruiseState.enabled = bool(self.CS.acc_active)
+    ret.cruiseState.speed = self.CS.v_cruise_pcm * CV.KPH_TO_MS
     ret.cruiseState.available = bool(self.CS.main_on)
+    ret.cruiseState.speedOffset = 0.
+
     ret.leftBlinker = self.CS.left_blinker_on
     ret.rightBlinker = self.CS.right_blinker_on
     ret.seatbeltUnlatched = self.CS.seatbelt_unlatched
+    ret.doorOpen = self.CS.door_open
 
     buttonEvents = []
 
@@ -165,6 +205,7 @@ class CarInterface(object):
     be.type = 'accelCruise'
     buttonEvents.append(be)
 
+
     events = []
     if not self.CS.can_valid:
       self.can_invalid_count += 1
@@ -173,31 +214,37 @@ class CarInterface(object):
     else:
       self.can_invalid_count = 0
 
-    if ret.seatbeltUnlatched and (self.CS.acc_active and not self.acc_active_prev):
+    if self.CS.steer_not_allowed:
+      events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
+
+    if ret.seatbeltUnlatched:
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
+
+    if ret.doorOpen:
+      events.append(create_event('doorOpen', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
 
     if self.CS.acc_active and not self.acc_active_prev:
       events.append(create_event('pcmEnable', [ET.ENABLE]))
     if not self.CS.acc_active:
       events.append(create_event('pcmDisable', [ET.USER_DISABLE]))
 
-    ## handle button presses
-    #for b in ret.buttonEvents:
-    #  # do enable on both accel and decel buttons
-    #  if b.type in ["accelCruise", "decelCruise"] and not b.pressed:
-    #    events.append(create_event('buttonEnable', [ET.ENABLE]))
-    #  # do disable on button down
-    #  if b.type == "cancel" and b.pressed:
-    #    events.append(create_event('buttonCancel', [ET.USER_DISABLE]))
+    # disable on gas pedal rising edge
+    #if (ret.gasPressed and not self.gas_pressed_prev):
+      #events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
+
+    #if ret.gasPressed:
+      #events.append(create_event('pedalPressed', [ET.PRE_ENABLE]))
 
     ret.events = events
 
     # update previous brake/gas pressed
+    self.gas_pressed_prev = ret.gasPressed
     self.acc_active_prev = self.CS.acc_active
 
     # cast to reader so it can't be modified
     return ret.as_reader()
 
   def apply(self, c):
-    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame, c.actuators)
+    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame, c.actuators,
+                   c.cruiseControl.cancel, c.hudControl.visualAlert)
     self.frame += 1
