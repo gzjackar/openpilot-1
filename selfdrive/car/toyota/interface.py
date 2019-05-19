@@ -74,7 +74,8 @@ class CarInterface(object):
     rotationalInertia_civic = 2500
     tireStiffnessFront_civic = 192150
     tireStiffnessRear_civic = 202500
-
+   
+    ret.centerToFront = ret.wheelbase * 0.44
     ret.steerKiBP, ret.steerKpBP = [[0.], [0.]]
     ret.steerActuatorDelay = 0.001  # Default delay, Prius has larger delay
     new_braking_tuned = False
@@ -273,6 +274,25 @@ class CarInterface(object):
         ret.longitudinalKpV = [3.6, 1.1, 1.0]
         ret.longitudinalKiV = [0.5, 0.24]
       
+    elif candidate == CAR.OLD_CAR:
+      ret.centerToFront = ret.wheelbase * 0.5
+      stop_and_go = True
+      ret.safetyParam = 100 # see conversion factor for STEER_TORQUE_EPS in dbc file
+      ret.wheelbase = 2.455
+      ret.steerRatio = 20.
+      tire_stiffness_factor = 0.444
+      ret.mass = 4690 * CV.LB_TO_KG + std_cargo  # mean between normal and hybrid
+      ret.steerKpV, ret.steerKiV = [[0.15], [0.03]]
+      ret.steerKf = 0.00006   # full torque for 20 deg at 80mph means 0.00007818594
+      if ret.enableGasInterceptor:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [1.2, 0.8, 0.5]
+        ret.longitudinalKiV = [0.18, 0.12]
+      else:
+        ret.gasMaxV = [0.2, 0.5, 0.7]
+        ret.longitudinalKpV = [3.6, 1.1, 1.0]
+        ret.longitudinalKiV = [0.5, 0.24]
+      
     if not new_braking_tuned:
       conversion_KpV = [0.278, 0.455, 0.3]  # conversion factors for new higher braking limit
       conversion_KiV = [0.4, 0.417]
@@ -280,7 +300,7 @@ class CarInterface(object):
       ret.longitudinalKiV = [round(float(i[1]) * conversion_KiV[i[0]], 3) for i in enumerate(ret.longitudinalKiV)]
 
     ret.steerRateCost = 1.
-    ret.centerToFront = ret.wheelbase * 0.44
+    
 
     ret.longPidDeadzoneBP = [0., 9.]
     ret.longPidDeadzoneV = [0., .15]
