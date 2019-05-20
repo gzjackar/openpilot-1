@@ -75,7 +75,7 @@ class CarInterface(object):
     tireStiffnessFront_civic = 192150
     tireStiffnessRear_civic = 202500
    
-    ret.centerToFront = ret.wheelbase * 0.44
+
     ret.steerKiBP, ret.steerKpBP = [[0.], [0.]]
     ret.steerActuatorDelay = 0.001  # Default delay, Prius has larger delay
     new_braking_tuned = False
@@ -275,7 +275,6 @@ class CarInterface(object):
         ret.longitudinalKiV = [0.5, 0.24]
       
     elif candidate == CAR.OLD_CAR:
-      ret.centerToFront = ret.wheelbase * 0.5
       stop_and_go = True
       ret.safetyParam = 100 # see conversion factor for STEER_TORQUE_EPS in dbc file
       ret.wheelbase = 2.455
@@ -293,6 +292,10 @@ class CarInterface(object):
         ret.longitudinalKpV = [3.6, 1.1, 1.0]
         ret.longitudinalKiV = [0.5, 0.24]
       
+    if candidate == CAR.OLD_CAR:
+      ret.centerToFront = ret.wheelbase * 0.5
+    else:
+      ret.centerToFront = ret.wheelbase * 0.44      
     if not new_braking_tuned:
       conversion_KpV = [0.278, 0.455, 0.3]  # conversion factors for new higher braking limit
       conversion_KiV = [0.4, 0.417]
