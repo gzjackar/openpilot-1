@@ -2,6 +2,7 @@
 import gc
 import zmq
 import json
+from selfdrive.manager import get_running
 from cereal import car, log
 from common.numpy_fast import clip
 from common.realtime import sec_since_boot, set_realtime_priority, Ratekeeper
@@ -495,7 +496,12 @@ def controlsd_thread(gctx=None, rate=100):
       pass
 
   prof = Profiler(False)  # off by default
-
+  while True:
+    running = get_running()
+    for p in running:
+      if p == "plannerd":
+        print "plannerd started"
+        break
   while True:
     start_time = int(sec_since_boot() * 1e9)
     prof.checkpoint("Ratekeeper", ignore=True)
