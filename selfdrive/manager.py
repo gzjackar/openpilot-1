@@ -143,11 +143,11 @@ persistent_processes = [
   'ui',
   'gpsd',
   'updated',
-  'athena'
+  'athena',
+  'controlsd'
 ]
 
 car_started_processes = [
-  'controlsd',
   'plannerd',
   'loggerd',
   'sensord',
