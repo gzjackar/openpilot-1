@@ -496,11 +496,13 @@ def controlsd_thread(gctx=None, rate=100):
       pass
 
   prof = Profiler(False)  # off by default
-  while True:
+  to_break = False
+  while not to_break:
     running = get_running()
     for p in running:
       if p == "plannerd":
         print "plannerd started"
+        to_break = True
         break
   while True:
     start_time = int(sec_since_boot() * 1e9)
