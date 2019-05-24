@@ -83,7 +83,7 @@ class CarController(object):
     self.packer_ch = CANPacker(DBC[car_fingerprint]['chassis'])
 
   def update(self, sendcan, enabled, CS, frame, actuators, \
-             hud_v_cruise, hud_show_lanes, hud_show_car, chime, chime_cnt):
+             hud_v_cruise, hud_show_lanes, hud_show_car, chime, chime_cnt, hud_alert):
     """ Controls thread """
 
     # Sanity check.
