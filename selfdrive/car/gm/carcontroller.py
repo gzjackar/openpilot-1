@@ -1,3 +1,4 @@
+from cereal import car
 from common.numpy_fast import interp
 from common.realtime import sec_since_boot
 from selfdrive.config import Conversions as CV
@@ -7,7 +8,7 @@ from selfdrive.car.gm import gmcan
 from selfdrive.car.gm.values import DBC, AccState, SUPERCRUISE_CARS
 from selfdrive.can.packer import CANPacker
 
-
+VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 class CarControllerParams():
   def __init__(self, car_fingerprint):
@@ -188,7 +189,7 @@ class CarController(object):
       lka_icon_status = (lka_active, lka_critical)
       if frame % P.CAMERA_KEEPALIVE_STEP == 0 \
           or lka_icon_status != self.lka_icon_status_last:
-        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical, visual_alert))
+        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical, VisualAlert.steerRequired))
         self.lka_icon_status_last = lka_icon_status
 
     # Send chimes
