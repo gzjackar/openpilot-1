@@ -139,7 +139,7 @@ def create_lka_icon_command(bus, active, critical, steer):
       dat = "\x50\xc0\x14"
     else:
       dat = "\x50\x40\x18"
-  else:
+  elif active:
       if critical:
         dat = "\x40\xc0\x14"
       else:
