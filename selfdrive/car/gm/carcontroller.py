@@ -67,7 +67,7 @@ def process_hud_alert(hud_alert):
   steer = 0
   if hud_alert == VisualAlert.steerRequired:
     steer = 1
-return steer
+  return steer
 
 class CarController(object):
   def __init__(self, canbus, car_fingerprint, allow_controls):
