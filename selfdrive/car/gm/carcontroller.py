@@ -187,7 +187,8 @@ class CarController(object):
       # Conveniently, sending camera message periodically also works as a keepalive.
       lka_active = CS.lkas_status == 1
       lka_critical = lka_active and abs(actuators.steer) > 0.9
-      steer = VisualAlert.steerRequired
+      if visual_alert == VisualAlert.steerRequired:
+        steer = 1
       lka_icon_status = (lka_active, lka_critical, steer)
       if frame % P.CAMERA_KEEPALIVE_STEP == 0 \
           or lka_icon_status != self.lka_icon_status_last:
