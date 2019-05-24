@@ -10,6 +10,7 @@ from selfdrive.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
+
 class CarControllerParams():
   def __init__(self, car_fingerprint):
     if car_fingerprint in SUPERCRUISE_CARS:
@@ -61,6 +62,12 @@ def actuator_hystereses(final_pedal, pedal_steady):
 
   return final_pedal, pedal_steady
 
+def process_hud_alert(hud_alert):
+  # initialize to no alert
+  steer = 0
+  if hud_alert == VisualAlert.steerRequired:
+    steer = 1
+return steer
 
 class CarController(object):
   def __init__(self, canbus, car_fingerprint, allow_controls):
@@ -94,7 +101,10 @@ class CarController(object):
     # Send CAN commands.
     can_sends = []
     canbus = self.canbus
-
+    
+    alert_out = process_hud_alert(hud_alert)
+    steer = alert_out
+    
     ### STEER ###
 
     if (frame % P.STEER_STEP) == 0:
@@ -189,7 +199,7 @@ class CarController(object):
       lka_icon_status = (lka_active, lka_critical)
       if frame % P.CAMERA_KEEPALIVE_STEP == 0 \
           or lka_icon_status != self.lka_icon_status_last:
-        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical, VisualAlert.steerRequired))
+        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical, steer))
         self.lka_icon_status_last = lka_icon_status
 
     # Send chimes
