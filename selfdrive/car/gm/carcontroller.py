@@ -1,3 +1,4 @@
+from cereal import car
 from common.numpy_fast import interp
 from common.realtime import sec_since_boot
 from selfdrive.config import Conversions as CV
@@ -6,6 +7,8 @@ from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.gm import gmcan
 from selfdrive.car.gm.values import DBC, AccState, SUPERCRUISE_CARS
 from selfdrive.can.packer import CANPacker
+
+VisualAlert = car.CarControl.HUDControl.VisualAlert
 
 
 class CarControllerParams():
@@ -184,10 +187,11 @@ class CarController(object):
       # Conveniently, sending camera message periodically also works as a keepalive.
       lka_active = CS.lkas_status == 1
       lka_critical = lka_active and abs(actuators.steer) > 0.9
-      lka_icon_status = (lka_active, lka_critical)
+      steer = VisualAlert.steerRequired
+      lka_icon_status = (lka_active, lka_critical, steer)
       if frame % P.CAMERA_KEEPALIVE_STEP == 0 \
           or lka_icon_status != self.lka_icon_status_last:
-        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical))
+        can_sends.append(gmcan.create_lka_icon_command(canbus.sw_gmlan, lka_active, lka_critical, steer))
         self.lka_icon_status_last = lka_icon_status
 
     # Send chimes
