@@ -69,7 +69,7 @@ class CarController(object):
     # this seems needed to avoid steering faults and to force the sync with the EPS counter
     frame = CS.lkas_counter
     if self.prev_frame == frame:
-      return
+      return []
 
     # *** compute control surfaces ***
     # steer torque
@@ -131,4 +131,5 @@ class CarController(object):
 
     self.ccframe += 1
     self.prev_frame = frame
-    sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan'))
+
+    return can_sends

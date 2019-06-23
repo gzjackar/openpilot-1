@@ -130,6 +130,10 @@ static int chrysler_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
   return true;
 }
 
+static void chrysler_init(int16_t param) {
+  chrysler_camera_detected = 0;
+}
+
 static int chrysler_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
   int32_t addr = to_fwd->RIR >> 21;
   // forward CAN 0 -> 2 so stock LKAS camera sees messages
@@ -156,5 +160,4 @@ const safety_hooks chrysler_hooks = {
   .tx_lin = nooutput_tx_lin_hook,
   .ignition = default_ign_hook,
   .fwd = chrysler_fwd_hook,
-  .relay = nooutput_relay_hook, // is this needed?
 };
