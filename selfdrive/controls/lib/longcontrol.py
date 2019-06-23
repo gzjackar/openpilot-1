@@ -6,7 +6,7 @@ import selfdrive.kegman_conf as kegman
 import selfdrive.messaging as messaging
 from selfdrive.services import service_list
 
-LongCtrlState = log.Live100Data.LongControlState
+LongCtrlState = log.ControlsState.LongControlState
 
 STOPPING_EGO_SPEED = 0.5
 MIN_CAN_SPEED = 0.3  # TODO: parametrize this in car interface
