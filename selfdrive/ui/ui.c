@@ -53,7 +53,7 @@
 #define ALERTSIZE_FULL 3
 
 #define UI_BUF_COUNT 4
-//#define SHOW_SPEEDLIMIT 1
+#define SHOW_SPEEDLIMIT 1
 //#define DEBUG_TURN
 
 //#define DEBUG_FPS
@@ -1493,6 +1493,7 @@ static void ui_draw_vision_footer(UIState *s) {
 
 #ifdef SHOW_SPEEDLIMIT
   ui_draw_vision_map(s);
+#endif
   ui_draw_vision_brake(s);
 }
 
