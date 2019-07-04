@@ -12,28 +12,18 @@ fi
 
 function launch {
   # apply update
-<<<<<<< HEAD
   file="/data/no_ota_updates"
   if ! [ -f "$file" ]; then
     if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
-       git reset --hard @{u} &&
-       git clean -xdf &&
-       exec "${BASH_SOURCE[0]}"
+      git reset --hard @{u} &&
+      git clean -xdf &&
+      # Touch all files on release2 after checkout to prevent rebuild
+      BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      if [[ "$BRANCH" == "release2" ]]; then
+          touch **
+      fi
+      exec "${BASH_SOURCE[0]}"
     fi
-=======
-  if [ "$(git rev-parse HEAD)" != "$(git rev-parse @{u})" ]; then
-    git reset --hard @{u} &&
-    git clean -xdf &&
-
-    # Touch all files on release2 after checkout to prevent rebuild
-    BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    if [[ "$BRANCH" == "release2" ]]; then
-        touch **
-    fi
-
-    exec "${BASH_SOURCE[0]}"
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
-  fi
 
   # no cpu rationing for now
   echo 0-3 > /dev/cpuset/background/cpus
