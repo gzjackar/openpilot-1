@@ -144,21 +144,14 @@ def thermald_thread():
   off_ts = None
   started_ts = None
   ignition_seen = False
-<<<<<<< HEAD
+
   #started_seen = False
-  passive_starter = LocationStarter()
-  thermal_status = ThermalStatus.green
-  health_sock.RCVTIMEO = 1500
-  current_filter = FirstOrderFilter(0., CURRENT_TAU, 1.)
-  services_killed = False
-=======
-  started_seen = False
   thermal_status = ThermalStatus.green
   health_sock.RCVTIMEO = 1500
   current_filter = FirstOrderFilter(0., CURRENT_TAU, 1.)
   health_prev = None
+  services_killed = False
 
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
   # Make sure charging is enabled
   charging_disabled = False
   os.system('echo "1" > /sys/class/power_supply/battery/charging_enabled')
@@ -177,16 +170,9 @@ def thermald_thread():
     health_prev = health
 
     # loggerd is gated based on free space
-<<<<<<< HEAD
-    try:
-      statvfs = os.statvfs(ROOT)
-    except OSError:
-      os.mkdir(ROOT)
-      statvfs = os.statvfs(ROOT)
-    avail = (statvfs.f_bavail * 1.0)/statvfs.f_blocks
-=======
+
     avail = get_available_percent() / 100.0
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
+
 
     # thermal message now also includes free space
     msg.thermal.freeSpace = avail
