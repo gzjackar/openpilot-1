@@ -122,12 +122,7 @@ else
   OBJS = visiond.o
 endif
 
-<<<<<<< HEAD
-OBJS = visiond.o
-OUTPUT = visiond-normal
-=======
 OUTPUT = visiond
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
 .PHONY: all
 all: $(OUTPUT)
