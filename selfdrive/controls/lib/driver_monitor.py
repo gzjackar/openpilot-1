@@ -1,9 +1,10 @@
 import numpy as np
-from common.realtime import sec_since_boot
+from common.realtime import sec_since_boot, DT_CTRL, DT_DMON
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from common.filter_simple import FirstOrderFilter
 import selfdrive.kegman_conf as kegman
 
+<<<<<<< HEAD
 _DT = 0.01                  # update runs at 100Hz
 _DTM = 0.1                  # DM runs at 10Hz
 _AWARENESS_TIME = int(kegman.conf['wheelTouchSeconds'])       # 3 minutes limit without user touching steering wheels make the car enter a terminal status
@@ -15,6 +16,14 @@ _DISTRACTED_PROMPT_TIME = 20.
 # measured 1 rad in x FOV. 1152x864 is original image, 160x320 is a right crop for model
 _CAMERA_FOV_X = 1.   # rad
 _CAMERA_FOV_Y = 0.75 # 4/3 aspect ratio
+=======
+_AWARENESS_TIME = 180        # 3 minutes limit without user touching steering wheels make the car enter a terminal status
+_AWARENESS_PRE_TIME = 20.    # a first alert is issued 20s before expiration
+_AWARENESS_PROMPT_TIME = 5.  # a second alert is issued 5s before start decelerating the car
+_DISTRACTED_TIME = 7.
+_DISTRACTED_PRE_TIME = 4.
+_DISTRACTED_PROMPT_TIME = 2.
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 # model output refers to center of cropped image, so need to apply the x displacement offset
 _PITCH_WEIGHT = 1.5  # pitch matters a lot more
 _METRIC_THRESHOLD = 0.4
@@ -69,9 +78,9 @@ class DriverStatus():
     self.monitor_valid = True   # variance needs to be low
     self.awareness = 1.
     self.driver_distracted = False
-    self.driver_distraction_filter = FirstOrderFilter(0., _DISTRACTED_FILTER_TS, _DTM)
+    self.driver_distraction_filter = FirstOrderFilter(0., _DISTRACTED_FILTER_TS, DT_DMON)
     self.variance_high = False
-    self.variance_filter = FirstOrderFilter(0., _VARIANCE_FILTER_TS, _DTM)
+    self.variance_filter = FirstOrderFilter(0., _VARIANCE_FILTER_TS, DT_DMON)
     self.ts_last_check = 0.
     self.face_detected = False
     self._set_timers()
@@ -85,11 +94,11 @@ class DriverStatus():
     if self.monitor_on:
       self.threshold_pre = _DISTRACTED_PRE_TIME / _DISTRACTED_TIME
       self.threshold_prompt = _DISTRACTED_PROMPT_TIME / _DISTRACTED_TIME
-      self.step_change = _DT / _DISTRACTED_TIME
+      self.step_change = DT_CTRL / _DISTRACTED_TIME
     else:
       self.threshold_pre = _AWARENESS_PRE_TIME / _AWARENESS_TIME
       self.threshold_prompt = _AWARENESS_PROMPT_TIME / _AWARENESS_TIME
-      self.step_change = _DT / _AWARENESS_TIME
+      self.step_change = DT_CTRL / _AWARENESS_TIME
 
   def _is_driver_distracted(self, pose):
     # to be tuned and to learn the driver's normal pose

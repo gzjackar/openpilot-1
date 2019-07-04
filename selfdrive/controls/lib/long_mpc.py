@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from common.numpy_fast import interp
+=======
+import os
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 import numpy as np
 import selfdrive.messaging as messaging
 from selfdrive.swaglog import cloudlog
@@ -6,8 +10,14 @@ from common.realtime import sec_since_boot
 from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
 from selfdrive.controls.lib.longitudinal_mpc import libmpc_py
 from selfdrive.controls.lib.drive_helpers import MPC_COST_LONG
+<<<<<<< HEAD
 from selfdrive.phantom import Phantom
 import time
+=======
+
+LOG_MPC = os.environ.get('LOG_MPC', False)
+
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
 class LongitudinalMpc(object):
   def __init__(self, mpc_id, live_longitudinal_mpc):
@@ -200,12 +210,16 @@ class LongitudinalMpc(object):
     return x_lead, v_lead
 
   def update(self, CS, lead, v_cruise_setpoint):
+<<<<<<< HEAD
     v_ego = CS.carState.vEgo
     a_ego = CS.carState.aEgo
     gas = CS.carState.gas
     brake = CS.carState.brake
     self.car_state = CS.carState
     self.v_ego = CS.carState.vEgo
+=======
+    v_ego = CS.vEgo
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
     # Setup current mpc state
     self.cur_state[0].x_ego = 0.0
@@ -280,7 +294,9 @@ class LongitudinalMpc(object):
     TR = self.get_TR()
     n_its = self.libmpc.run_mpc(self.cur_state, self.mpc_solution, self.a_lead_tau, a_lead, TR)
     duration = int((sec_since_boot() - t) * 1e9)
-    self.send_mpc_solution(n_its, duration)
+
+    if LOG_MPC:
+      self.send_mpc_solution(n_its, duration)
 
     # Get solution. MPC timestep is 0.2 s, so interpolation to 0.05 s is needed
     self.v_mpc = self.mpc_solution[0].v_ego[1]
@@ -303,6 +319,11 @@ class LongitudinalMpc(object):
                        MPC_COST_LONG.ACCELERATION, MPC_COST_LONG.JERK)
       self.cur_state[0].v_ego = self.v_ego
       self.cur_state[0].a_ego = 0.0
+<<<<<<< HEAD
       self.v_mpc = self.v_ego
       self.a_mpc = CS.carState.aEgo
+=======
+      self.v_mpc = v_ego
+      self.a_mpc = CS.aEgo
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
       self.prev_lead_status = False

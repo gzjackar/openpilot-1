@@ -55,7 +55,8 @@ def get_powertrain_can_parser(CP, canbus):
       ("CruiseState", "AcceleratorPedal2", 0),
     ]
 
-  return CANParser(DBC[CP.carFingerprint]['pt'], signals, [], canbus.powertrain)
+  return CANParser(DBC[CP.carFingerprint]['pt'], signals, [], canbus.powertrain, timeout=100)
+
 
 def get_chassis_can_parser(CP, canbus):
   # this function generates lists for signal, messages and initial values
@@ -190,9 +191,13 @@ class CarState(object):
           self.cstm_btns.btns[id].btn_label2 = self.alcaLabels[self.alcaMode]
           self.cstm_btns.hasChanges = True
 
+<<<<<<< HEAD
   def update(self, pt_cp, ch_cp):
 
     self.can_valid = pt_cp.can_valid
+=======
+  def update(self, pt_cp):
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
     self.prev_cruise_buttons = self.cruise_buttons
     self.cruise_buttons = pt_cp.vl["ASCMSteeringButton"]['ACCButtons']
     self.prev_distance_button = self.distance_button
@@ -242,7 +247,6 @@ class CarState(object):
     self.steer_error = False
 
     self.brake_error = False
-    self.can_valid = True
 
     self.prev_left_blinker_on = self.left_blinker_on
     self.prev_right_blinker_on = self.right_blinker_on

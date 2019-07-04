@@ -1,6 +1,9 @@
 from cereal import car
+<<<<<<< HEAD
 #from common.numpy_fast import interp
 from selfdrive.boardd.boardd import can_list_to_can_capnp
+=======
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 from selfdrive.car import apply_toyota_steer_torque_limits
 from selfdrive.car.chrysler.chryslercan import create_lkas_hud, create_lkas_command, \
                                                create_wheel_buttons, create_lkas_heartbit, \
@@ -45,6 +48,7 @@ class CarController(object):
     self.packer = CANPacker(dbc_name)
 
 
+<<<<<<< HEAD
   def update(self, sendcan, enabled, CS, frame, actuators,
              pcm_cancel_cmd, hud_alert, audible_alert):
     #update custom UI buttons and alerts
@@ -66,10 +70,13 @@ class CarController(object):
     # steer torque
     alca_angle, alca_steer, alca_enabled, turn_signal_needed = self.ALCA.update(enabled, CS, frame, actuators)
     
+=======
+  def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, hud_alert, audible_alert):
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
     # this seems needed to avoid steering faults and to force the sync with the EPS counter
     frame = CS.lkas_counter
     if self.prev_frame == frame:
-      return
+      return []
 
     # *** compute control surfaces ***
     # steer torque
@@ -131,4 +138,5 @@ class CarController(object):
 
     self.ccframe += 1
     self.prev_frame = frame
-    sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan'))
+
+    return can_sends

@@ -94,7 +94,9 @@ def is_on_hotspot():
 
     is_android = result.startswith('192.168.43.')
     is_ios = result.startswith('172.20.10.')
-    return (is_android or is_ios)
+    is_entune = result.startswith('10.0.2.')
+
+    return (is_android or is_ios or is_entune)
   except:
     return False
 
@@ -145,30 +147,37 @@ class Uploader(object):
       total_size += os.stat(fn).st_size
     return dict(name_counts), total_size
 
-  def next_file_to_compress(self):
+  def next_file_to_upload(self, with_raw):
+    # try to upload qlog files first
     for name, key, fn in self.gen_upload_files():
-      if name.endswith("log"):
+      if name  == "qlog.bz2":
         return (key, fn, 0)
-    return None
 
+<<<<<<< HEAD
   def next_file_to_upload(self, with_video):
     # try to upload log files first
     for name, key, fn in self.gen_upload_files():
       if name == "rlog.bz2":
         return (key, fn, 0)
+=======
+    if with_raw:
+      # then upload log files
+      for name, key, fn in self.gen_upload_files():
+        if name  == "rlog.bz2":
+          return (key, fn, 1)
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
-    if with_video:
-      # then upload compressed rear and front camera files
+      # then upload rear and front camera files
       for name, key, fn in self.gen_upload_files():
         if name == "fcamera.hevc":
-          return (key, fn, 1)
-        elif name == "dcamera.hevc":
           return (key, fn, 2)
+        elif name == "dcamera.hevc":
+          return (key, fn, 3)
 
       # then upload other files
       for name, key, fn in self.gen_upload_files():
         if not name.endswith('.lock') and not name.endswith(".tmp"):
-          return (key, fn, 3)
+          return (key, fn, 4)
 
     return None
 
@@ -206,6 +215,7 @@ class Uploader(object):
 
     return self.last_resp
 
+<<<<<<< HEAD
   def compress(self, key, fn):
     # write out the bz2 compress
     if fn.endswith("log"):
@@ -221,6 +231,8 @@ class Uploader(object):
 
     return (key, fn)
 
+=======
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
   def upload(self, key, fn):
     try:
       sz = os.path.getsize(fn)
@@ -241,10 +253,19 @@ class Uploader(object):
       stat = self.normal_upload(key, fn)
       if stat is not None and stat.status_code in (200, 201):
         cloudlog.event("upload_success", key=key, fn=fn, sz=sz)
+<<<<<<< HEAD
         try:
           os.unlink(fn)  # delete the file
         except OSError:
           pass
+=======
+
+        # delete the file
+        try:
+          os.unlink(fn)
+        except OSError:
+          cloudlog.exception("delete_failed", stat=stat, exc=self.last_exc, key=key, fn=fn, sz=sz)
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
         success = True
       else:
@@ -279,6 +300,7 @@ def uploader_fn(exit_event):
   except:
     last_gps_size = None
   while True:
+    allow_raw_upload = (params.get("IsUploadRawEnabled") != "0")
     allow_cellular = (params.get("IsUploadVideoOverCellularEnabled") != "0")
     on_hotspot = is_on_hotspot()
     on_wifi = is_on_wifi()
@@ -308,6 +330,7 @@ def uploader_fn(exit_event):
     if exit_event.is_set():
       return
 
+<<<<<<< HEAD
     if not should_upload:
       time.sleep(5)
       continue
@@ -319,6 +342,9 @@ def uploader_fn(exit_event):
         continue
 
     d = uploader.next_file_to_upload(with_video=True)
+=======
+    d = uploader.next_file_to_upload(with_raw=allow_raw_upload and should_upload)
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
     if d is None:
       time.sleep(5)
       continue

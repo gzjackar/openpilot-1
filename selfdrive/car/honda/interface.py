@@ -3,28 +3,19 @@ import os
 import numpy as np
 from cereal import car
 from common.numpy_fast import clip, interp
-from common.realtime import sec_since_boot
+from common.realtime import sec_since_boot, DT_CTRL
 from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET, get_events
 from selfdrive.controls.lib.vehicle_model import VehicleModel
 from selfdrive.car.honda.carstate import CarState, get_can_parser, get_cam_can_parser
-from selfdrive.car.honda.values import CruiseButtons, CAR, HONDA_BOSCH, AUDIO_HUD, VISUAL_HUD
+from selfdrive.car.honda.values import CruiseButtons, CAR, HONDA_BOSCH, AUDIO_HUD, VISUAL_HUD, CAMERA_MSGS
+from selfdrive.car import STD_CARGO_KG
 from selfdrive.controls.lib.planner import _A_CRUISE_MAX_V_FOLLOWING
 import selfdrive.kegman_conf as kegman
 
 angleSteersoffset = float(kegman.conf['angle_steers_offset'])  # deg offset
 
-
-try:
-  from selfdrive.car.honda.carcontroller import CarController
-except ImportError:
-  CarController = None
-
-
-# msgs sent for steering controller by camera module on can 0.
-# those messages are mutually exclusive on CRV and non-CRV cars
-CAMERA_MSGS = [0xe4, 0x194]
 
 A_ACC_MAX = max(_A_CRUISE_MAX_V_FOLLOWING)
 
@@ -84,7 +75,7 @@ def get_compute_gb_acura():
 
 
 class CarInterface(object):
-  def __init__(self, CP, sendcan=None):
+  def __init__(self, CP, CarController):
     self.CP = CP
 
     self.frame = 0
@@ -92,9 +83,12 @@ class CarInterface(object):
     self.last_enable_sent = 0
     self.gas_pressed_prev = False
     self.brake_pressed_prev = False
+<<<<<<< HEAD
     self.can_invalid_count = 0
     self.cam_can_invalid_count = 0
     self.cruise_enabled_prev = False
+=======
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
 
     self.cp = get_can_parser(CP)
     self.cp_cam = get_cam_can_parser(CP)
@@ -103,10 +97,9 @@ class CarInterface(object):
     self.CS = CarState(CP)
     self.VM = VehicleModel(CP)
 
-    # sending if read only is False
-    if sendcan is not None:
-      self.sendcan = sendcan
-      self.CC = CarController(self.cp.dbc_name, CP.enableCamera)
+    self.CC = None
+    if CarController is not None:
+      self.CC = CarController(self.cp.dbc_name)
 
     if self.CS.CP.carFingerprint == CAR.ACURA_ILX:
       self.compute_gb = get_compute_gb_acura()
@@ -146,19 +139,20 @@ class CarInterface(object):
     return float(max(max_accel, a_target / A_ACC_MAX)) * min(speedLimiter, accelLimiter)
 
   @staticmethod
-  def get_params(candidate, fingerprint):
+  def get_params(candidate, fingerprint, vin=""):
 
     ret = car.CarParams.new_message()
     ret.carName = "honda"
     ret.carFingerprint = candidate
+    ret.carVin = vin
 
     if candidate in HONDA_BOSCH:
-      ret.safetyModel = car.CarParams.SafetyModels.hondaBosch
+      ret.safetyModel = car.CarParams.SafetyModel.hondaBosch
       ret.enableCamera = True
       ret.radarOffCan = True
       ret.openpilotLongitudinalControl = False
     else:
-      ret.safetyModel = car.CarParams.SafetyModels.honda
+      ret.safetyModel = car.CarParams.SafetyModel.honda
       ret.enableCamera = not any(x for x in CAMERA_MSGS if x in fingerprint)
       ret.enableGasInterceptor = 0x201 in fingerprint
       ret.openpilotLongitudinalControl = ret.enableCamera
@@ -168,12 +162,9 @@ class CarInterface(object):
 
     ret.enableCruise = not ret.enableGasInterceptor
 
-    # kg of standard extra cargo to count for drive, gas, etc...
-    std_cargo = 136
-
     # FIXME: hardcoding honda civic 2016 touring params so they can be used to
     # scale unknown params for other cars
-    mass_civic = 2923 * CV.LB_TO_KG + std_cargo
+    mass_civic = 2923. * CV.LB_TO_KG + STD_CARGO_KG
     wheelbase_civic = 2.70
     centerToFront_civic = wheelbase_civic * 0.4
     centerToRear_civic = wheelbase_civic - centerToFront_civic
@@ -213,7 +204,7 @@ class CarInterface(object):
       stop_and_go = True
       if not candidate == CAR.ACCORDH: # Hybrid uses same brake msg as hatch
         ret.safetyParam = 1 # Accord and CRV 5G use an alternate user brake msg
-      ret.mass = 3279. * CV.LB_TO_KG + std_cargo
+      ret.mass = 3279. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.83
       ret.centerToFront = ret.wheelbase * 0.39
       ret.steerRatio = 17.11  # 0.5.10
@@ -228,7 +219,7 @@ class CarInterface(object):
 
     elif candidate == CAR.ACURA_ILX:
       stop_and_go = False
-      ret.mass = 3095 * CV.LB_TO_KG + std_cargo
+      ret.mass = 3095. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.67
       ret.centerToFront = ret.wheelbase * 0.37
       ret.steerRatio = 18.61  # 15.3 is spec end-to-end
@@ -241,7 +232,7 @@ class CarInterface(object):
 
     elif candidate == CAR.CRV:
       stop_and_go = False
-      ret.mass = 3572 * CV.LB_TO_KG + std_cargo
+      ret.mass = 3572. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.62
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 16.0         # 0.5.10
@@ -257,7 +248,7 @@ class CarInterface(object):
     elif candidate == CAR.CRV_5G:
       stop_and_go = True
       ret.safetyParam = 1 # Accord and CRV 5G use an alternate user brake msg
-      ret.mass = 3410. * CV.LB_TO_KG + std_cargo
+      ret.mass = 3410. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 16.0   # 12.3 is spec end-to-end
@@ -271,7 +262,7 @@ class CarInterface(object):
     elif candidate == CAR.CRV_HYBRID:
       stop_and_go = True
       ret.safetyParam = 1 # Accord and CRV 5G use an alternate user brake msg
-      ret.mass = 1667. + std_cargo # mean of 4 models in kg
+      ret.mass = 1667. + STD_CARGO_KG # mean of 4 models in kg
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 16.0   # 12.3 is spec end-to-end
@@ -284,7 +275,7 @@ class CarInterface(object):
 
     elif candidate == CAR.ACURA_RDX:
       stop_and_go = False
-      ret.mass = 3935 * CV.LB_TO_KG + std_cargo
+      ret.mass = 3935. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.68
       ret.centerToFront = ret.wheelbase * 0.38
       ret.steerRatio = 15.0         # as spec
@@ -297,7 +288,7 @@ class CarInterface(object):
 
     elif candidate == CAR.ODYSSEY:
       stop_and_go = False
-      ret.mass = 4471 * CV.LB_TO_KG + std_cargo
+      ret.mass = 4471. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 3.00
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 14.35        # as spec
@@ -310,7 +301,7 @@ class CarInterface(object):
 
     elif candidate == CAR.ODYSSEY_CHN:
       stop_and_go = False
-      ret.mass = 1849.2 + std_cargo # mean of 4 models in kg
+      ret.mass = 1849.2 + STD_CARGO_KG # mean of 4 models in kg
       ret.wheelbase = 2.90 # spec
       ret.centerToFront = ret.wheelbase * 0.41 # from CAR.ODYSSEY
       ret.steerRatio = 14.35 # from CAR.ODYSSEY
@@ -323,9 +314,9 @@ class CarInterface(object):
 
     elif candidate in (CAR.PILOT, CAR.PILOT_2019):
       stop_and_go = False
-      ret.mass = 4303 * CV.LB_TO_KG + std_cargo
-      ret.wheelbase = 2.81
-      ret.centerToFront = ret.wheelbase * 0.41
+      ret.mass = 4204. * CV.LB_TO_KG + STD_CARGO_KG # average weight
+      ret.wheelbase = 2.82
+      ret.centerToFront = ret.wheelbase * 0.428 # average weight distribution
       ret.steerRatio = 16.0         # as spec
 
       tire_stiffness_factor = 0.444 # not optimized yet
@@ -338,7 +329,7 @@ class CarInterface(object):
 
     elif candidate == CAR.RIDGELINE:
       stop_and_go = False
-      ret.mass = 4515 * CV.LB_TO_KG + std_cargo
+      ret.mass = 4515. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 3.18
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 15.59        # as spec
@@ -402,14 +393,15 @@ class CarInterface(object):
   def update(self, c):
     # ******************* do can recv *******************
     canMonoTimes = []
-
-    self.cp.update(int(sec_since_boot() * 1e9), False)
-    self.cp_cam.update(int(sec_since_boot() * 1e9), False)
+    can_rcv_valid, _ = self.cp.update(int(sec_since_boot() * 1e9), True)
+    cam_rcv_valid, _ = self.cp_cam.update(int(sec_since_boot() * 1e9), False)
 
     self.CS.update(self.cp, self.cp_cam)
 
     # create message
     ret = car.CarState.new_message()
+
+    ret.canValid = can_rcv_valid and cam_rcv_valid and self.cp.can_valid
 
     # speeds
     ret.vEgo = self.CS.v_ego
@@ -511,9 +503,8 @@ class CarInterface(object):
     ret.buttonEvents = buttonEvents
     ret.gasbuttonstatus = self.CS.gasMode
     # events
-    # TODO: event names aren't checked at compile time.
-    # Maybe there is a way to use capnp enums directly
     events = []
+<<<<<<< HEAD
     if not self.CS.can_valid:
       self.can_invalid_count += 1
       if self.can_invalid_count >= 5:
@@ -534,6 +525,11 @@ class CarInterface(object):
     else:
       disengage_event = False
 
+=======
+    # wait 1.0s before throwing the alert to avoid it popping when you turn off the car
+    if self.cp_cam.can_invalid_cnt >= 100 and self.CS.CP.carFingerprint not in HONDA_BOSCH and self.CP.enableCamera:
+      events.append(create_event('invalidGiraffeHonda', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
     if self.CS.steer_error:
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
     elif self.CS.steer_warning:
@@ -581,7 +577,7 @@ class CarInterface(object):
     if self.CS.CP.minEnableSpeed > 0 and ret.vEgo < 0.001:
       events.append(create_event('manualRestart', [ET.WARNING]))
 
-    cur_time = sec_since_boot()
+    cur_time = self.frame * DT_CTRL
     enable_pressed = False
     # handle button presses
     for b in ret.buttonEvents:
@@ -633,17 +629,18 @@ class CarInterface(object):
 
     pcm_accel = int(clip(c.cruiseControl.accelOverride, 0, 1) * 0xc6)
 
-    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame,
-                   c.actuators,
-                   c.cruiseControl.speedOverride,
-                   c.cruiseControl.override,
-                   c.cruiseControl.cancel,
-                   pcm_accel,
-                   hud_v_cruise,
-                   c.hudControl.lanesVisible,
-                   hud_show_car=c.hudControl.leadVisible,
-                   hud_alert=hud_alert,
-                   snd_beep=snd_beep,
-                   snd_chime=snd_chime)
+    can_sends = self.CC.update(c.enabled, self.CS, self.frame,
+                               c.actuators,
+                               c.cruiseControl.speedOverride,
+                               c.cruiseControl.override,
+                               c.cruiseControl.cancel,
+                               pcm_accel,
+                               hud_v_cruise,
+                               c.hudControl.lanesVisible,
+                               hud_show_car=c.hudControl.leadVisible,
+                               hud_alert=hud_alert,
+                               snd_beep=snd_beep,
+                               snd_chime=snd_chime)
 
     self.frame += 1
+    return can_sends

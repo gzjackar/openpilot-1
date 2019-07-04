@@ -33,7 +33,7 @@ class LatControlPID(object):
     self.previous_integral = self.pid.i
 
   def update(self, active, v_ego, angle_steers, angle_steers_rate, steer_override, CP, VM, path_plan):
-    pid_log = log.Live100Data.LateralPIDState.new_message()
+    pid_log = log.ControlsState.LateralPIDState.new_message()
     pid_log.steerAngle = float(angle_steers)
     pid_log.steerRate = float(angle_steers_rate)
 
@@ -43,8 +43,13 @@ class LatControlPID(object):
       self.pid.reset()
       self.previous_integral = 0.0
     else:
+<<<<<<< HEAD
       self.angle_steers_des = interp(sec_since_boot(), path_plan.mpcTimes, path_plan.mpcAngles)
       
+=======
+      self.angle_steers_des = path_plan.angleSteers  # get from MPC/PathPlanner
+
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
       steers_max = get_steer_max(CP, v_ego)
       self.pid.pos_limit = steers_max
       self.pid.neg_limit = -steers_max

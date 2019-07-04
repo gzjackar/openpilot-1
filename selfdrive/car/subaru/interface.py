@@ -6,19 +6,14 @@ from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET
 from selfdrive.controls.lib.vehicle_model import VehicleModel
 from selfdrive.car.subaru.values import CAR
 from selfdrive.car.subaru.carstate import CarState, get_powertrain_can_parser, get_camera_can_parser
-
-try:
-  from selfdrive.car.subaru.carcontroller import CarController
-except ImportError:
-  CarController = None
+from selfdrive.car import STD_CARGO_KG
 
 
 class CarInterface(object):
-  def __init__(self, CP, sendcan=None):
+  def __init__(self, CP, CarController):
     self.CP = CP
 
     self.frame = 0
-    self.can_invalid_count = 0
     self.acc_active_prev = 0
     self.gas_pressed_prev = False
 
@@ -30,9 +25,8 @@ class CarInterface(object):
 
     self.gas_pressed_prev = False
 
-    # sending if read only is False
-    if sendcan is not None:
-      self.sendcan = sendcan
+    self.CC = None
+    if CarController is not None:
       self.CC = CarController(CP.carFingerprint)
 
   @staticmethod
@@ -44,23 +38,28 @@ class CarInterface(object):
     return 1.0
 
   @staticmethod
-  def get_params(candidate, fingerprint):
+  def get_params(candidate, fingerprint, vin=""):
     ret = car.CarParams.new_message()
 
     ret.carName = "subaru"
     ret.carFingerprint = candidate
-    ret.safetyModel = car.CarParams.SafetyModels.subaru
+    ret.carVin = vin
+    ret.safetyModel = car.CarParams.SafetyModel.subaru
 
     ret.enableCruise = True
     ret.steerLimitAlert = True
 
     ret.enableCamera = True
 
-    std_cargo = 136
     ret.steerRateCost = 0.7
 
+<<<<<<< HEAD
     if candidate in [CAR.IMPREZA, CAR.XV]:
       ret.mass = 1568 + std_cargo
+=======
+    if candidate in [CAR.IMPREZA]:
+      ret.mass = 1568. + STD_CARGO_KG
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
       ret.wheelbase = 2.67
       ret.centerToFront = ret.wheelbase * 0.5
       ret.steerRatio = 15
@@ -118,7 +117,7 @@ class CarInterface(object):
 
     # hardcoding honda civic 2016 touring params so they can be used to
     # scale unknown params for other cars
-    mass_civic = 2923./2.205 + std_cargo
+    mass_civic = 2923. * CV.LB_TO_KG + STD_CARGO_KG
     wheelbase_civic = 2.70
     centerToFront_civic = wheelbase_civic * 0.4
     centerToRear_civic = wheelbase_civic - centerToFront_civic
@@ -145,13 +144,15 @@ class CarInterface(object):
 
   # returns a car.CarState
   def update(self, c):
+    can_rcv_valid, _ = self.pt_cp.update(int(sec_since_boot() * 1e9), True)
+    cam_rcv_valid, _ = self.cam_cp.update(int(sec_since_boot() * 1e9), False)
 
-    self.pt_cp.update(int(sec_since_boot() * 1e9), False)
-    self.cam_cp.update(int(sec_since_boot() * 1e9), False)
     self.CS.update(self.pt_cp, self.cam_cp)
 
     # create message
     ret = car.CarState.new_message()
+
+    ret.canValid = can_rcv_valid and cam_rcv_valid and self.pt_cp.can_valid and self.cam_cp.can_valid
 
     # speeds
     ret.vEgo = self.CS.v_ego
@@ -215,6 +216,7 @@ class CarInterface(object):
     buttonEvents.append(be)
 
     events = []
+<<<<<<< HEAD
     if not self.CS.can_valid:
       self.can_invalid_count += 1
       if self.can_invalid_count >= 5:
@@ -226,6 +228,9 @@ class CarInterface(object):
       events.append(create_event('steerUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
       
     if ret.seatbeltUnlatched and (self.CS.acc_active and not self.acc_active_prev):
+=======
+    if ret.seatbeltUnlatched:
+>>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
       events.append(create_event('seatbeltNotLatched', [ET.NO_ENTRY, ET.SOFT_DISABLE]))
 
     if ret.doorOpen:
@@ -253,6 +258,8 @@ class CarInterface(object):
     return ret.as_reader()
 
   def apply(self, c):
-    self.CC.update(self.sendcan, c.enabled, self.CS, self.frame, c.actuators,
-                   c.cruiseControl.cancel, c.hudControl.visualAlert)
+    can_sends = self.CC.update(c.enabled, self.CS, self.frame, c.actuators,
+                               c.cruiseControl.cancel, c.hudControl.visualAlert,
+                               c.hudControl.leftLaneVisible, c.hudControl.rightLaneVisible)
     self.frame += 1
+    return can_sends

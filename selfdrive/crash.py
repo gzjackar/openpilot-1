@@ -4,6 +4,7 @@ import sys
 import json
 #from subprocess import check_output
 import threading
+import capnp
 from selfdrive.version import version, dirty
 
 from selfdrive.swaglog import cloudlog
@@ -60,7 +61,9 @@ else:
   client = Client('https://137e8e621f114f858f4c392c52e18c6d:8aba82f49af040c8aac45e95a8484970@sentry.io/1404547', install_sys_hook=False, transport=HTTPTransport, release=version, tags=error_tags)
 
   def capture_exception(*args, **kwargs):
-    client.captureException(*args, **kwargs)
+    exc_info = sys.exc_info()
+    if not exc_info[0] is capnp.lib.capnp.KjException:
+      client.captureException(*args, **kwargs)
     cloudlog.error("crash", exc_info=kwargs.get('exc_info', 1))
 
   def capture_warning(warning_string):
