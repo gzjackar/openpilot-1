@@ -102,6 +102,7 @@ managed_processes = {
   "plannerd": "selfdrive.controls.plannerd",
   "radard": "selfdrive.controls.radard",
   "ubloxd": ("selfdrive/locationd", ["./ubloxd"]),
+  "mapd": "selfdrive.mapd.mapd",
   "loggerd": ("selfdrive/loggerd", ["./loggerd"]),
   "logmessaged": "selfdrive.logmessaged",
   "tombstoned": "selfdrive.tombstoned",
@@ -165,6 +166,7 @@ car_started_processes = [
   'visiond',
   'proclogd',
   'ubloxd',
+  'mapd',
   'gpsd',
   'deleter',
 ]
@@ -344,15 +346,13 @@ def system(cmd):
 
 def manager_thread():
   # now loop
-<<<<<<< HEAD
+
   global manager_sock
   context = zmq.Context()
-  thermal_sock = messaging.sub_sock(context, service_list['thermal'].port)
+  thermal_sock = messaging.sub_sock(service_list['thermal'].port)
   gps_sock = messaging.sub_sock(context, service_list['gpsLocation'].port, conflate=True)
   manager_sock = messaging.pub_sock(context, service_list['managerData'].port)
-=======
-  thermal_sock = messaging.sub_sock(service_list['thermal'].port)
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
+
 
   cloudlog.info("manager start")
   cloudlog.info({"environ": os.environ})
