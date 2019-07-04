@@ -187,6 +187,7 @@ Directory structure
         ├── locationd       # Soon to be home of precise location
         ├── logcatd         # Android logcat as a service
         ├── loggerd         # Logger and uploader of car data
+        ├── mapd            # Fetches map data and computes next global path
         ├── proclogd        # Logs information from proc
         ├── sensord         # IMU / GPS interface code
         ├── test            # Car simulator running code through virtual maneuvers
