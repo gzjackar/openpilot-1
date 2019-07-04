@@ -230,12 +230,10 @@ typedef struct UIState {
   void *radarstate_sock_raw;
   void *livempc_sock_raw;
   void *plus_sock_raw;
-<<<<<<< HEAD
   
   
   zsock_t *map_data_sock;
-=======
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
+
   void *map_data_sock_raw;
 
   void *uilayout_sock_raw;
@@ -1146,11 +1144,7 @@ static void ui_draw_vision_maxspeed(UIState *s) {
   int viz_maxspeed_h = 202;
   int viz_maxspeed_x = (ui_viz_rx + (bdr_s*2));
   int viz_maxspeed_y = (box_y + (bdr_s*1.5));
-<<<<<<< HEAD
-  int viz_maxspeed_xo = 0;
-  viz_maxspeed_w += viz_maxspeed_xo;
-  //viz_maxspeed_x += viz_maxspeed_w - (viz_maxspeed_xo *2);
-=======
+
   int viz_maxspeed_xo = 180;
 
 #ifdef SHOW_SPEEDLIMIT
@@ -1159,7 +1153,7 @@ static void ui_draw_vision_maxspeed(UIState *s) {
 #else
   viz_maxspeed_xo = 0;
 #endif
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
+
 
   // Draw Background
   nvgBeginPath(s->vg);
