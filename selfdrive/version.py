@@ -29,13 +29,8 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "common", "ve
   version = _versionf.read().split('"')[1]
 
 try:
-<<<<<<< HEAD
-  origin = subprocess.check_output(["git", "config", "--get", "remote.origin.url"]).rstrip()
-  if origin.startswith('git@github.com:arne182') or origin.startswith('https://github.com/arne182'):
-=======
   origin = get_git_remote()
-  if origin.startswith('git@github.com:commaai') or origin.startswith('https://github.com/commaai'):
->>>>>>> 76ab558ca634601f388e591d1ac064c2cae402e7
+  if origin.startswith('git@github.com:arne182') or origin.startswith('https://github.com/arne182'):
     if origin.endswith('/one.git'):
       dirty = True
     else:
