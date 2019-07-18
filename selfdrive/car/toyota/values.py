@@ -26,7 +26,7 @@ STATIC_MSGS = [
   (0x48b, ECU.CAM, (CAR.OLD_CAR), 0, 100, '\x66\x06\x08\x0a\x02\x00\x00\x00'),
   (0x4d3, ECU.CAM, (CAR.OLD_CAR), 0, 100, '\x1C\x00\x00\x01\x00\x00\x00\x00'),
 
-  (0x128, ECU.DSU, OLD_CAR), 1,   3, '\xf4\x01\x90\x83\x00\x37'),
+  (0x128, ECU.DSU, (CAR.OLD_CAR), 1,   3, '\xf4\x01\x90\x83\x00\x37'),
   (0x141, ECU.DSU, (CAR.OLD_CAR), 1,   2, '\x00\x00\x00\x46'),
   (0x160, ECU.DSU, (CAR.OLD_CAR), 1,   7, '\x00\x00\x08\x12\x01\x31\x9c\x51'),
   (0x161, ECU.DSU, (CAR.OLD_CAR), 1,   7, '\x00\x1e\x00\x00\x00\x80\x07'),
