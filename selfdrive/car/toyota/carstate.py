@@ -64,9 +64,6 @@ def get_can_parser(CP):
   else:
     signals += [("STEER_ANGLE", "STEER_ANGLE_SENSOR", 0)]
 
-  if CP.carFingerprint == CAR.PRIUS:
-    signals += [("STATE", "AUTOPARK_STATUS", 0)]
-
   # add gas interceptor reading if we are using it
   if CP.enableGasInterceptor:
     signals.append(("INTERCEPTOR_GAS", "GAS_SENSOR", 0))
@@ -168,7 +165,4 @@ class CarState(object):
     self.pcm_acc_active = bool(cp.vl["PCM_CRUISE"]['CRUISE_ACTIVE'])
     self.low_speed_lockout = cp.vl["PCM_CRUISE_2"]['LOW_SPEED_LOCKOUT'] == 2
     self.brake_lights = bool(cp.vl["ESP_CONTROL"]['BRAKE_LIGHTS_ACC'] or self.brake_pressed)
-    if self.CP.carFingerprint == CAR.PRIUS:
-      self.generic_toggle = cp.vl["AUTOPARK_STATUS"]['STATE'] != 0
-    else:
-      self.generic_toggle = bool(cp.vl["LIGHT_STALK"]['AUTO_HIGH_BEAM'])
+    self.generic_toggle = bool(cp.vl["LIGHT_STALK"]['AUTO_HIGH_BEAM'])
