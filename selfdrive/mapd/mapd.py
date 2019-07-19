@@ -127,6 +127,7 @@ def query_thread():
   
         except Exception as e:
           print(e)
+          crash.capture_warning(e)
           query_lock.acquire()
           last_query_result = None
           query_lock.release()
