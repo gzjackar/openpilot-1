@@ -145,7 +145,7 @@ class Planner(object):
     v_cruise_setpoint = v_cruise_kph * CV.KPH_TO_MS
 
     
-    self.lastlat_Control = messaging.recv_one(self.lat_Control).latControl
+    self.lastlat_Control = messaging.recv_one_or_none(self.lat_Control).latControl
     
     lead_1 = sm['radarState'].leadOne
     lead_2 = sm['radarState'].leadTwo
