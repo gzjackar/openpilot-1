@@ -26,6 +26,7 @@ import time
 import threading
 import numpy as np
 import overpy
+import requests
 from collections import defaultdict
 from common.transformations.coordinates import geodetic2ecef
 from selfdrive.services import service_list
@@ -171,8 +172,8 @@ def mapsd_thread():
     gps = messaging.recv_sock(gps_sock, wait=True)
     gps_ext = None
     traffic = None
-    gps_ext = messaging.recv_one_or_none(socket)
-    traffic = messaging.recv_one_or_none(socket)
+    gps_ext = messaging.recv_one_or_none(gps_external_sock)
+    traffic = messaging.recv_one_or_none(traffic_data_sock)
     if traffic is not None:
       if traffic.liveTrafficData.speedLimitValid:
         speedLimittraffic = traffic.liveTrafficData.speedLimit
