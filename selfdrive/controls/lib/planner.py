@@ -144,9 +144,8 @@ class Planner(object):
     force_slow_decel = sm['controlsState'].forceDecel
     v_cruise_setpoint = v_cruise_kph * CV.KPH_TO_MS
 
-    for socket, event in self.poller.poll(0):
-      if socket is self.lat_Control:
-        self.lastlat_Control = messaging.recv_one(socket).latControl
+    
+    self.lastlat_Control = messaging.recv_one(self.lat_Control).latControl
     
     lead_1 = sm['radarState'].leadOne
     lead_2 = sm['radarState'].leadTwo
