@@ -23,18 +23,15 @@ default_speeds_generator.main(DEFAULT_SPEEDS_BY_REGION_JSON_FILE)
 import os
 import sys
 import time
-import zmq
 import threading
 import numpy as np
 import overpy
 from collections import defaultdict
-from common.params import Params
 from common.transformations.coordinates import geodetic2ecef
 from selfdrive.services import service_list
 import selfdrive.messaging as messaging
 from selfdrive.mapd.mapd_helpers import MAPS_LOOKAHEAD_DISTANCE, Way, circle_through_points
 import selfdrive.crash as crash
-from selfdrive.version import version, dirty
 
 
 OVERPASS_API_URL = "https://overpass.kumi.systems/api/interpreter"
@@ -48,6 +45,14 @@ query_lock = threading.Lock()
 last_query_result = None
 last_query_pos = None
 cache_valid = False
+
+def connected_to_internet(url='https://overpass.kumi.systems/api/interpreter', timeout=5):
+    try:
+        requests.get(url, timeout=timeout)
+        return True
+    except requests.ConnectionError:
+        print("No internet connection available.")
+    return False
 
 def build_way_query(lat, lon, radius=50):
   """Builds a query to find all highways within a given radius around a point"""
@@ -86,41 +91,46 @@ def query_thread():
           cache_valid = False
 
       q = build_way_query(last_gps.latitude, last_gps.longitude, radius=4000)
-      try:
-        new_result = api.query(q)
-
-        # Build kd-tree
-        nodes = []
-        real_nodes = []
-        node_to_way = defaultdict(list)
-        location_info = {}
-
-        for n in new_result.nodes:
-          nodes.append((float(n.lat), float(n.lon), 0))
-          real_nodes.append(n)
-
-        for way in new_result.ways:
-          for n in way.nodes:
-            node_to_way[n.id].append(way)
-
-        for area in new_result.areas:
-          if area.tags.get('admin_level', '') == "2":
-            location_info['country'] = area.tags.get('ISO3166-1:alpha2', '')
-          if area.tags.get('admin_level', '') == "4":
-            location_info['region'] = area.tags.get('name', '')
-
-        nodes = np.asarray(nodes)
-        nodes = geodetic2ecef(nodes)
-        tree = spatial.cKDTree(nodes)
-
-        query_lock.acquire()
-        last_query_result = new_result, tree, real_nodes, node_to_way, location_info
-        last_query_pos = last_gps
-        cache_valid = True
-        query_lock.release()
-
-      except Exception as e:
-        print(e)
+      if connected_to_internet():
+        try:
+          new_result = api.query(q)
+  
+          # Build kd-tree
+          nodes = []
+          real_nodes = []
+          node_to_way = defaultdict(list)
+          location_info = {}
+  
+          for n in new_result.nodes:
+            nodes.append((float(n.lat), float(n.lon), 0))
+            real_nodes.append(n)
+  
+          for way in new_result.ways:
+            for n in way.nodes:
+              node_to_way[n.id].append(way)
+  
+          for area in new_result.areas:
+            if area.tags.get('admin_level', '') == "2":
+              location_info['country'] = area.tags.get('ISO3166-1:alpha2', '')
+            if area.tags.get('admin_level', '') == "4":
+              location_info['region'] = area.tags.get('name', '')
+  
+          nodes = np.asarray(nodes)
+          nodes = geodetic2ecef(nodes)
+          tree = spatial.cKDTree(nodes)
+  
+          query_lock.acquire()
+          last_query_result = new_result, tree, real_nodes, node_to_way, location_info
+          last_query_pos = last_gps
+          cache_valid = True
+          query_lock.release()
+  
+        except Exception as e:
+          print(e)
+          query_lock.acquire()
+          last_query_result = None
+          query_lock.release()
+      else:
         query_lock.acquire()
         last_query_result = None
         query_lock.release()
@@ -135,13 +145,11 @@ def save_gps_data(gps):
 
 def mapsd_thread():
   global last_gps
-
-  context = zmq.Context()
-  poller = zmq.Poller()
-  gps_sock = messaging.sub_sock(context, service_list['gpsLocation'].port, conflate=True)
-  gps_external_sock = messaging.sub_sock(context, service_list['gpsLocationExternal'].port, conflate=True, poller=poller)
-  map_data_sock = messaging.pub_sock(context, service_list['liveMapData'].port)
-  traffic_data_sock = messaging.sub_sock(context, service_list['liveTrafficData'].port, conflate=True, poller=poller)
+  
+  gps_sock = messaging.sub_sock(service_list['gpsLocation'].port)
+  gps_external_sock = messaging.sub_sock(service_list['gpsLocationExternal'].port)
+  map_data_sock = messaging.pub_sock(service_list['liveMapData'].port)
+  traffic_data_sock = messaging.sub_sock(service_list['liveTrafficData'].port)
 
   cur_way = None
   curvature_valid = False
@@ -159,14 +167,11 @@ def mapsd_thread():
   speedLimittrafficvalid = False
   
   while True:
-    gps = messaging.recv_one(gps_sock)
+    gps = messaging.recv_sock(gps_sock, wait=True)
     gps_ext = None
     traffic = None
-    for socket, event in poller.poll(0):
-      if socket is gps_external_sock:
-        gps_ext = messaging.recv_one(socket)
-      elif socket is traffic_data_sock:
-        traffic = messaging.recv_one(socket)
+    gps_ext = messaging.recv_one_or_none(socket)
+    traffic = messaging.recv_one_or_none(socket)
     if traffic is not None:
       if traffic.liveTrafficData.speedLimitValid:
         speedLimittraffic = traffic.liveTrafficData.speedLimit
@@ -269,7 +274,7 @@ def mapsd_thread():
             dist_to_turn = 999
 
       query_lock.release()
-
+  
     dat = messaging.new_message()
     dat.init('liveMapData')
 
@@ -336,11 +341,6 @@ def mapsd_thread():
 
 
 def main(gctx=None):
-  params = Params()
-  dongle_id = params.get("DongleId")
-  crash.bind_user(id=dongle_id)
-  crash.bind_extra(version=version, dirty=dirty, is_eon=True)
-  crash.install()
 
   main_thread = threading.Thread(target=mapsd_thread)
   main_thread.daemon = True
