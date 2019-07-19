@@ -1,9 +1,10 @@
 from common.numpy_fast import interp
 import numpy as np
 from selfdrive.controls.lib.latcontrol_helpers import model_polyfit, calc_desired_path, compute_path_pinv
-import selfdrive.kegman_conf as kegman
+from selfdrive import op_params
+op_params = op_params.opParams()
 
-CAMERA_OFFSET = float(kegman.conf['cameraOffset'])  # m from center car to camera
+CAMERA_OFFSET = op_params.get('cameraOffset', default=0.06)  # m from center car to camera
 
 
 class ModelParser(object):

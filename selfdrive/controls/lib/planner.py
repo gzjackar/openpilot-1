@@ -15,8 +15,8 @@ from selfdrive.controls.lib.speed_smoother import speed_smoother
 from selfdrive.controls.lib.longcontrol import LongCtrlState, MIN_CAN_SPEED
 from selfdrive.controls.lib.fcw import FCWChecker
 from selfdrive.controls.lib.long_mpc import LongitudinalMpc
-
-import selfdrive.kegman_conf as kegman
+from selfdrive import op_params
+op_params = op_params.opParams()
 
 NO_CURVATURE_SPEED = 200. * CV.MPH_TO_MS
 
@@ -39,7 +39,7 @@ _A_CRUISE_MAX_BP = [0., 5., 10., 20., 55.]
 
 
 # Lookup table for turns
-_brake_factor = float(kegman.get("brakefactor"))
+_brake_factor = op_params.get("brakefactor", default=1.2)
 _A_TOTAL_MAX_V = [2.3 * _brake_factor, 3.0 * _brake_factor, 3.9 * _brake_factor]
 _A_TOTAL_MAX_BP = [0., 25., 55.]
 
