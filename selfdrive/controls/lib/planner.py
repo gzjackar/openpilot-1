@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import zmq
+
 import math
 import numpy as np
 from common.params import Params
@@ -81,9 +81,8 @@ def limit_accel_in_turns(v_ego, angle_steers, a_target, CP, angle_later):
 class Planner(object):
   def __init__(self, CP, fcw_enabled):
     self.CP = CP
-    context = zmq.Context()
-    self.poller = zmq.Poller()
-    self.lat_Control = messaging.sub_sock(context, service_list['latControl'].port, conflate=True, poller=self.poller)
+
+    self.lat_Control = messaging.sub_sock(service_list['latControl'].port)
     
     self.plan = messaging.pub_sock(service_list['plan'].port)
     self.live_longitudinal_mpc = messaging.pub_sock(service_list['liveLongitudinalMpc'].port)
