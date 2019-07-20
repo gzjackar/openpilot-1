@@ -63,9 +63,9 @@ class ModelParser(object):
       lane_width_diff = abs(np.mean(self.lane_width_array) - current_lane_width)
       if abs(self.lane_width - current_lane_width) > lane_width_diff:
         lane_width_diff = abs(self.lane_width - current_lane_width)
-      else:
-        lane_width_diff = abs(self.lane_width - current_lane_width)
-      lane_prob = interp(lane_width_diff, [0.3, 1.0], [1.0, 0.0])
+    else:
+      lane_width_diff = abs(self.lane_width - current_lane_width)
+    lane_prob = interp(lane_width_diff, [0.3, 1.0], [1.0, 0.0])
       
     if abs(self.r_poly[3] - self.c_poly[3]) - abs(self.l_poly[3] - self.c_poly[3]) > 0.3 and \
       abs(self.r_poly[3] - r_poly[3]) > abs(self.l_poly[3] - l_poly[3]):
