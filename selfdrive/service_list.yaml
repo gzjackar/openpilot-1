@@ -80,17 +80,16 @@ testLiveLocation: [8045, false, 0.]
 testJoystick: [8056, false, 0.]
 
 #ui Events
-uiButtonInfo: [8201, false, 1]
-uiCustomAlert: [8202, false ,1]
-uiSetCar: [8203, false, 1]
-uiButtonStatus: [8204, false, 1]
-uiPlaySound: [8205, false, 1]
-uiUpdate: [8206, false, 1]
+#uiButtonInfo: [8201, false, 1]
+#uiCustomAlert: [8202, false ,1]
+#uiSetCar: [8203, false, 1]
+#uiButtonStatus: [8204, false, 1]
+#uiPlaySound: [8205, false, 1]
+#uiUpdate: [8206, false, 1]
 
 # arne182
 latControl: [8207, false, 20]
 liveTrafficData: [8208, false, 10]
-phantomData: [8209, false, 100.]
 managerData: [8210, false, 1]
 liveMapData: [8011, false, 10]
 # 8080 is reserved for slave testing daemon
